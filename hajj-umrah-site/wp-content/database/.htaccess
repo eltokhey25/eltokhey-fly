@@ -1,0 +1,7 @@
+# حماية مجلد قاعدة البيانات — يمنع الوصول المباشر لملفات SQLite
+# Apache 2.4 syntax
+Require all denied
+
+# Apache 2.2 fallback
+Order Deny,Allow
+Deny from all

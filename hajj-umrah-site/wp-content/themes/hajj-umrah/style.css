@@ -1,0 +1,24 @@
+/*
+Theme Name: Hajj & Umrah
+Theme URI: https://example.com/hajj-umrah
+Author: Eltokhey
+Description: ثيم ووردبريس متخصص لعرض رحلات الحج والعمرة مع لوحة تحكم لإضافة الرحلات وبرنامج السير التفصيلي.
+Version: 1.0.0
+Requires at least: 6.0
+Tested up to: 6.7
+Requires PHP: 7.4
+License: GNU General Public License v2 or later
+Text Domain: hajj-umrah
+Tags: rtl-language-support, custom-menu, featured-images
+*/
+
+/* Color palette
+   --primary:    #17304f  (نيلي ملكي غامق)
+   --primary-2:  #2b5aa0  (نيلي متوسط)
+   --primary-3:  #4c8fe0  (أزرق ملكي مشرق)
+   --accent:     #149a97  (تركواز)
+   --accent-2:   #43c8c4  (تركواز فاتح)
+   --dark:       #0a1526
+   --cream:      #eef4f2
+   --gray:       #8a93a6
+*/
