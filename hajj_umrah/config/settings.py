@@ -7,6 +7,30 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+
+def _load_env_file(*paths):
+    for path in paths:
+        env_file = Path(path)
+        if not env_file.exists():
+            continue
+        try:
+            with open(env_file) as fh:
+                for line in fh:
+                    line = line.strip()
+                    if not line or line.startswith('#') or '=' not in line:
+                        continue
+                    key, _, value = line.partition('=')
+                    key = key.strip()
+                    value = value.strip().strip('"').strip("'")
+                    if key:
+                        os.environ.setdefault(key, value)
+        except OSError:
+            continue
+
+
+# Load local .env files (if present), without overriding real environment variables.
+_load_env_file(BASE_DIR / '.env', BASE_DIR.parent / '.env')
+
 # Load secret keys from the environment (or a local .env file). The fallback
 # below is only for local development — set DJANGO_SECRET_KEY on the server.
 SECRET_KEY = os.environ.get(
@@ -100,7 +124,24 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = os.environ.get('DJANGO_MEDIA_ROOT', str(BASE_DIR / 'media'))
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'localhost')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'true').lower() in {'1', 'true', 'yes', 'on'}
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.environ.get(
+    'DEFAULT_FROM_EMAIL', EMAIL_HOST_USER or 'noreply@localhost'
+)
+ADMIN_NOTIFICATION_EMAIL = os.environ.get('ADMIN_NOTIFICATION_EMAIL', '')
+
+# Use SMTP when credentials are configured, otherwise fall back to the console
+# backend (prints emails to stdout) so local development and tests keep working.
+EMAIL_BACKEND = os.environ.get(
+    'EMAIL_BACKEND',
+    'django.core.mail.backends.smtp.EmailBackend'
+    if (EMAIL_HOST and EMAIL_HOST_PASSWORD and EMAIL_HOST_USER)
+    else 'django.core.mail.backends.console.EmailBackend',
+)
 
 # Same-origin only so the dashboard can embed the public site in a live preview iframe
 X_FRAME_OPTIONS = 'SAMEORIGIN'

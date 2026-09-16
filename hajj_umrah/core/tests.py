@@ -1,3 +1,5 @@
+from unittest import mock
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
 from django.urls import reverse
@@ -92,3 +94,67 @@ class AdminTests(TestCase):
         self.client.login(username='admin', password='secret123')
         self.assertEqual(self.client.get('/admin/').status_code, 200)
         self.assertEqual(self.client.get('/admin/core/trip/').status_code, 200)
+
+
+@override_settings(ADMIN_NOTIFICATION_EMAIL='admin@example.com')
+class BookingEmailTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        Trip.objects.create(
+            name='رحلة تجريبية',
+            slug='trip-test',
+            trip_type='umrah',
+            price=15000,
+            duration='15 يوم',
+            departure='2026-12-10',
+            return_date='2026-12-24',
+            transport='طيران',
+            capacity=45,
+            remaining=10,
+            is_active=True,
+        )
+        SiteSettings.load()
+
+    def _post_booking(self, email='customer@example.com'):
+        return self.client.post(reverse('core:booking'), {
+            'hu_booking_submit': '1',
+            'hu_name': 'محمد أحمد',
+            'hu_phone': '01000000000',
+            'hu_email': email,
+            'hu_departure': 'رحلة تجريبية — 2026-12-10',
+            'hu_type': 'عمرة',
+            'hu_people': '2',
+            'hu_notes': 'ملاحظات',
+        })
+
+    def test_booking_sends_admin_and_customer_emails(self):
+        with mock.patch('core.views.send_mail') as mock_send:
+            resp = self._post_booking()
+
+        self.assertContains(resp, 'تم استلام طلبك بنجاح')
+        self.assertEqual(mock_send.call_count, 2)
+
+        sent = [call.args for call in mock_send.call_args_list]
+        admin_subject = f'حجز جديد: رحلة تجريبية — 2026-12-10 - محمد أحمد'
+        self.assertIn((admin_subject, mock.ANY, None, ['admin@example.com']), sent)
+        self.assertIn((mock.ANY, mock.ANY, None, ['customer@example.com']), sent)
+
+    def test_booking_without_email_sends_only_admin_email(self):
+        with mock.patch('core.views.send_mail') as mock_send:
+            resp = self._post_booking(email='')
+
+        self.assertContains(resp, 'تم استلام طلبك بنجاح')
+        self.assertEqual(mock_send.call_count, 1)
+        subject, body, from_email, recipients = mock_send.call_args.args
+        self.assertEqual(recipients, ['admin@example.com'])
+        self.assertIn('حجز جديد', subject)
+        for field in ('محمد أحمد', '01000000000', 'رحلة تجريبية', 'عدد الأفراد: 2', 'تاريخ الطلب'):
+            self.assertIn(field, body)
+
+    def test_email_failure_does_not_break_booking(self):
+        with mock.patch('core.views.logger'), \
+                mock.patch('core.views.send_mail', side_effect=Exception('SMTP down')):
+            resp = self._post_booking()
+
+        self.assertContains(resp, 'تم استلام طلبك بنجاح')
+        self.assertEqual(Booking.objects.filter(phone='01000000000').count(), 1)

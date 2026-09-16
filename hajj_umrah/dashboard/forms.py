@@ -178,10 +178,11 @@ class TripForm(forms.ModelForm):
 class BookingForm(forms.ModelForm):
     class Meta:
         model = Booking
-        fields = ['name', 'phone', 'trip_label', 'trip_type', 'people', 'notes']
+        fields = ['name', 'phone', 'email', 'trip_label', 'trip_type', 'people', 'notes']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'input'}),
             'phone': forms.TextInput(attrs={'class': 'input ltr'}),
+            'email': forms.EmailInput(attrs={'class': 'input ltr'}),
             'trip_label': forms.TextInput(attrs={'class': 'input'}),
             'trip_type': forms.Select(attrs={'class': 'input'}),
             'people': forms.NumberInput(attrs={'class': 'input', 'min': 1}),
@@ -193,6 +194,7 @@ class BookingForm(forms.ModelForm):
         labels = {
             'name': 'الاسم الكامل',
             'phone': 'رقم الهاتف',
+            'email': 'البريد الإلكتروني',
             'trip_label': 'الرحلة / الموعد',
             'trip_type': 'نوع الرحلة',
             'people': 'عدد الأفراد',

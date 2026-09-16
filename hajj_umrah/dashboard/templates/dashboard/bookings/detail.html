@@ -26,6 +26,9 @@
           <span class="muted">الهاتف</span><strong class="ltr">{{ booking.phone }}</strong>
         </li>
         <li style="display:flex;justify-content:space-between;border-bottom:1px solid var(--border);padding:8px 0;">
+          <span class="muted">البريد الإلكتروني</span><strong class="ltr">{{ booking.email|default:'—' }}</strong>
+        </li>
+        <li style="display:flex;justify-content:space-between;border-bottom:1px solid var(--border);padding:8px 0;">
           <span class="muted">الرحلة / الموعد</span><strong>{{ booking.trip_label|default:'غير محدد' }}</strong>
         </li>
         <li style="display:flex;justify-content:space-between;border-bottom:1px solid var(--border);padding:8px 0;">

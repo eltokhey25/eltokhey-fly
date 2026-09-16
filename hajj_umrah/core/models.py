@@ -58,6 +58,7 @@ class Trip(models.Model):
 class Booking(models.Model):
     name = models.CharField('الاسم الكامل', max_length=255)
     phone = models.CharField('رقم الهاتف', max_length=50)
+    email = models.EmailField('البريد الإلكتروني', max_length=254, blank=True)
     trip_label = models.CharField('الرحلة / الموعد', max_length=500, blank=True)
     trip_type = models.CharField('نوع الرحلة', max_length=50, blank=True)
     people = models.PositiveIntegerField('عدد الأفراد', default=1)

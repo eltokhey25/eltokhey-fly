@@ -24,13 +24,14 @@
     {% if bookings %}
       <table class="table">
         <thead>
-          <tr><th>الاسم</th><th>الهاتف</th><th>الرحلة / الموعد</th><th>النوع</th><th>الأفراد</th><th>التاريخ</th><th></th></tr>
+          <tr><th>الاسم</th><th>الهاتف</th><th>البريد الإلكتروني</th><th>الرحلة / الموعد</th><th>النوع</th><th>الأفراد</th><th>التاريخ</th><th></th></tr>
         </thead>
         <tbody>
           {% for booking in bookings %}
             <tr>
               <td><a href="{% url 'dashboard:booking_detail' booking.pk %}"><strong>{{ booking.name }}</strong></a></td>
               <td><span class="muted ltr">{{ booking.phone }}</span></td>
+              <td>{% if booking.email %}<span class="muted ltr">{{ booking.email }}</span>{% else %}<span class="muted">—</span>{% endif %}</td>
               <td>{{ booking.trip_label|truncatechars:40 }}</td>
               <td>
                 {% if booking.trip_type %}
