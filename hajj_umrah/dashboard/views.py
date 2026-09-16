@@ -1,4 +1,5 @@
 from datetime import timedelta
+import logging
 
 from django.contrib import messages
 from django.contrib.auth import get_user_model, logout
@@ -11,7 +12,14 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from core.models import Booking, SiteSettings, Trip
+from core.models import Booking, BookingStatus, SiteSettings, Trip
+from core.whatsapp import (
+    booking_confirmed_message,
+    booking_created_message,
+    booking_rejected_message,
+    build_whatsapp_url,
+    send_whatsapp,
+)
 
 from .forms import (
     BookingForm,
@@ -25,6 +33,8 @@ from .models import MediaFile
 from .permissions import staff_required, superuser_required
 
 User = get_user_model()
+
+logger = logging.getLogger(__name__)
 
 SECTION_SLUGS = ['hero', 'trips', 'why', 'cta']
 SECTION_LABELS = {
@@ -173,19 +183,39 @@ def trip_delete(request, slug):
 @staff_required
 def booking_list(request):
     query = request.GET.get('q', '').strip()
+    status = request.GET.get('status', '').strip()
     bookings = Booking.objects.all().order_by('-created_at')
     if query:
         bookings = bookings.filter(
-            Q(name__icontains=query) | Q(phone__icontains=query) | Q(trip_label__icontains=query)
+            Q(name__icontains=query) | Q(phone__icontains=query)
+            | Q(trip_label__icontains=query) | Q(reference_code__icontains=query)
         )
-    context = {'bookings': bookings, 'q': query, 'page': 'bookings'}
+    if status in BookingStatus.values:
+        bookings = bookings.filter(status=status)
+    context = {
+        'bookings': bookings,
+        'q': query,
+        'filter_status': status,
+        'status_choices': BookingStatus.choices,
+        'page': 'bookings',
+    }
     return render(request, 'dashboard/bookings/list.html', context)
 
 
 @staff_required
 def booking_detail(request, pk):
     booking = get_object_or_404(Booking, pk=pk)
-    context = {'booking': booking, 'page': 'bookings'}
+    if booking.status == BookingStatus.CONFIRMED:
+        wa_msg = booking_confirmed_message(booking)
+    elif booking.status == BookingStatus.REJECTED:
+        wa_msg = booking_rejected_message(booking)
+    else:
+        wa_msg = booking_created_message(booking)
+    context = {
+        'booking': booking,
+        'wa_url': build_whatsapp_url(booking.phone, wa_msg),
+        'page': 'bookings',
+    }
     return render(request, 'dashboard/bookings/detail.html', context)
 
 
@@ -207,6 +237,61 @@ def booking_delete(request, pk):
     messages.success(request, f'تم حذف طلب الحجز «{booking.name}».')
     booking.delete()
     return redirect('dashboard:bookings')
+
+
+def _book_current_user(booking):
+    booking.handled_by = request.user
+
+
+@staff_required
+@require_POST
+def booking_confirm(request, pk):
+    booking = get_object_or_404(Booking, pk=pk)
+    booking.status = BookingStatus.CONFIRMED
+    booking.confirmed_at = timezone.now()
+    booking.handled_by = request.user
+    booking.save(update_fields=['status', 'confirmed_at', 'handled_by'])
+    try:
+        send_whatsapp(booking.phone, booking_confirmed_message(booking))
+    except Exception:
+        logger.exception('فشل إرسال واتساب تأكيد الحجز')
+    messages.success(
+        request,
+        f'تم تأكيد حجز «{booking.name}» رقم {booking.reference_code}.',
+    )
+    return redirect('dashboard:booking_detail', pk=booking.pk)
+
+
+@staff_required
+@require_POST
+def booking_reject(request, pk):
+    booking = get_object_or_404(Booking, pk=pk)
+    booking.status = BookingStatus.REJECTED
+    booking.handled_by = request.user
+    booking.save(update_fields=['status', 'handled_by'])
+    try:
+        send_whatsapp(booking.phone, booking_rejected_message(booking))
+    except Exception:
+        logger.exception('فشل إرسال واتساب رفض الحجز')
+    messages.error(
+        request,
+        f'تم رفض حجز «{booking.name}» رقم {booking.reference_code}.',
+    )
+    return redirect('dashboard:booking_detail', pk=booking.pk)
+
+
+@staff_required
+@require_POST
+def booking_complete(request, pk):
+    booking = get_object_or_404(Booking, pk=pk)
+    booking.status = BookingStatus.COMPLETED
+    booking.handled_by = request.user
+    booking.save(update_fields=['status', 'handled_by'])
+    messages.success(
+        request,
+        f'تم تحديد حجز «{booking.name}» كرحلة مكتملة.',
+    )
+    return redirect('dashboard:booking_detail', pk=booking.pk)
 
 
 # --------------------------------------------------------------------------

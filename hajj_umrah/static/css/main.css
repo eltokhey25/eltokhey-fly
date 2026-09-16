@@ -1215,6 +1215,157 @@ a:hover {
   }
 }
 
+/* ===== Booking tracking ===== */
+.track-card {
+  background: var(--glass);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 28px;
+  max-width: 680px;
+  margin-inline: auto;
+}
+
+.track-form {
+  display: flex;
+  gap: 10px;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.track-form input {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font);
+  font-size: 1rem;
+  padding: 13px 16px;
+  border: 1px solid #cfd9e8;
+  border-radius: 12px;
+  background: #fff;
+  color: var(--ink);
+}
+
+.track-form input:focus {
+  outline: none;
+  border-color: var(--primary-3);
+  box-shadow: 0 0 0 4px rgba(76, 143, 224, 0.15);
+}
+
+.track-result {
+  margin-top: 26px;
+  border: 1px solid rgba(22, 41, 75, 0.12);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.7);
+  padding: 22px;
+}
+
+.track-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.ref-code {
+  font-size: 1.15rem;
+  letter-spacing: 0.5px;
+  color: var(--primary);
+  direction: ltr;
+  display: inline-block;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 6px 18px;
+  border-radius: 50px;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.status-pending {
+  background: #fdf3c7;
+  color: #855d00;
+}
+
+.status-confirmed {
+  background: #d8f3e3;
+  color: #0b7a3b;
+}
+
+.status-rejected {
+  background: #ffe0e0;
+  color: #b91c1c;
+}
+
+.status-completed {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.track-rows {
+  display: flex;
+  flex-direction: column;
+  margin-top: 10px;
+}
+
+.track-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(22, 41, 75, 0.08);
+}
+
+.track-row:last-child {
+  border-bottom: 0;
+}
+
+.track-row .lbl {
+  color: var(--gray);
+}
+
+.track-msg {
+  margin-top: 16px;
+  padding: 14px 18px;
+  border-radius: 12px;
+  font-weight: 600;
+  line-height: 1.7;
+}
+
+.msg-date {
+  display: block;
+  font-weight: 500;
+  margin-top: 6px;
+  opacity: 0.85;
+}
+
+.status-msg-pending {
+  background: #fdf3c7;
+  color: #855d00;
+}
+
+.status-msg-confirmed {
+  background: #d8f3e3;
+  color: #0b7a3b;
+}
+
+.status-msg-rejected {
+  background: #ffe0e0;
+  color: #b91c1c;
+}
+
+.status-msg-completed {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.track-help {
+  margin-top: 16px;
+  text-align: center;
+}
+
 /* ===== Utility ===== */
 .text-center {
   text-align: center;

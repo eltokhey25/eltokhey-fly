@@ -14,8 +14,14 @@
 
 <div class="panel">
   <div class="panel-head">
-    <form method="get" style="display:flex;gap:8px;">
-      <input class="input" type="search" name="q" placeholder="بحث بالاسم أو الهاتف أو الرحلة…" value="{{ q }}">
+    <form method="get" style="display:flex;gap:8px;flex-wrap:wrap;">
+      <input class="input" type="search" name="q" placeholder="بحث بالاسم أو الهاتف أو الرحلة أو رقم الحجز…" value="{{ q }}">
+      <select class="input" name="status" style="max-width:200px;">
+        <option value="">كل الحالات</option>
+        {% for value, label in status_choices %}
+          <option value="{{ value }}" {% if filter_status == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
       <button class="btn btn-ghost btn-sm" type="submit">بحث</button>
     </form>
   </div>
@@ -24,23 +30,24 @@
     {% if bookings %}
       <table class="table">
         <thead>
-          <tr><th>الاسم</th><th>الهاتف</th><th>البريد الإلكتروني</th><th>الرحلة / الموعد</th><th>النوع</th><th>الأفراد</th><th>التاريخ</th><th></th></tr>
+          <tr><th>رقم الحجز</th><th>الاسم</th><th>الهاتف</th><th>البريد الإلكتروني</th><th>الرحلة / الموعد</th><th>الأفراد</th><th>الحالة</th><th>التاريخ</th><th></th></tr>
         </thead>
         <tbody>
           {% for booking in bookings %}
             <tr>
+              <td><a href="{% url 'dashboard:booking_detail' booking.pk %}"><strong class="ltr">{{ booking.reference_code }}</strong></a></td>
               <td><a href="{% url 'dashboard:booking_detail' booking.pk %}"><strong>{{ booking.name }}</strong></a></td>
               <td><span class="muted ltr">{{ booking.phone }}</span></td>
               <td>{% if booking.email %}<span class="muted ltr">{{ booking.email }}</span>{% else %}<span class="muted">—</span>{% endif %}</td>
               <td>{{ booking.trip_label|truncatechars:40 }}</td>
-              <td>
-                {% if booking.trip_type %}
-                  <span class="badge badge-blue">{{ booking.trip_type }}</span>
-                {% else %}
-                  <span class="badge badge-gray">عام</span>
-                {% endif %}
-              </td>
               <td>{{ booking.people }}</td>
+              <td>
+                {% if booking.status == 'pending' %}<span class="badge badge-gold">قيد المراجعة</span>
+                {% elif booking.status == 'confirmed' %}<span class="badge badge-green">مؤكد</span>
+                {% elif booking.status == 'rejected' %}<span class="badge badge-red">مرفوض</span>
+                {% elif booking.status == 'completed' %}<span class="badge badge-blue">مكتمل</span>
+                {% else %}<span class="badge badge-gray">{{ booking.status }}</span>{% endif %}
+              </td>
               <td><span class="muted">{{ booking.created_at|date:"Y-m-d H:i" }}</span></td>
               <td>
                 <div class="row-actions">

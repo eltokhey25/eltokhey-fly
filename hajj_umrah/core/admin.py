@@ -19,9 +19,11 @@ class TripAdmin(admin.ModelAdmin):
 
 @admin.register(Booking)
 class BookingAdmin(admin.ModelAdmin):
-    list_display = ('name', 'phone', 'trip_label', 'trip_type', 'people', 'created_at')
-    search_fields = ('name', 'phone', 'trip_label', 'notes')
-    readonly_fields = ('name', 'phone', 'trip_label', 'trip_type', 'people', 'notes', 'created_at')
+    list_display = ('reference_code', 'status', 'name', 'phone', 'trip_label', 'people', 'created_at')
+    list_filter = ('status',)
+    list_editable = ('status',)
+    search_fields = ('name', 'phone', 'email', 'reference_code', 'trip_label', 'notes')
+    readonly_fields = ('name', 'phone', 'email', 'trip_label', 'trip_type', 'people', 'notes', 'created_at', 'confirmed_at', 'handled_by')
 
 
 @admin.register(SiteSettings)

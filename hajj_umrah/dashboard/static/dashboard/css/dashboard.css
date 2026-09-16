@@ -215,6 +215,8 @@ button { font-family: var(--font); cursor: pointer; }
 .btn-outline:hover { background: var(--primary-soft); color: var(--primary-2); transform: none; }
 .btn-danger { background: var(--danger); box-shadow: 0 8px 18px rgba(225, 29, 72, 0.25); }
 .btn-danger:hover { background: #be123c; }
+.btn-warning { background: var(--accent); color: #3a2a00; box-shadow: 0 8px 18px rgba(245, 158, 11, 0.25); }
+.btn-warning:hover { background: #d97706; color: #fff; }
 .btn-ghost { background: transparent; color: var(--text); border: 1px solid var(--border); box-shadow: none; }
 .btn-ghost:hover { background: var(--surface-2); border-color: var(--muted); color: var(--text); }
 .btn-danger-ghost { background: transparent; color: var(--danger); border: 1.5px solid #fecdd3; box-shadow: none; }

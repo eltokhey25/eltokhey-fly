@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+
+{% block title %}تتبع حجزك — {{ site.company }}{% endblock %}
+
+{% block og_title %}تتبع حجزك — {{ site.company }}{% endblock %}
+
+{% block meta_description %}تابع حالة حجزك لرحلات الحج والعمرة عبر رقم الحجز أو رقم هاتفك، واعرف ما إذا كان قيد المراجعة أو مؤكداً أو مرفوضاً.{% endblock %}
+
+{% block body_class %}page-track-booking{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <div class="container reveal">
+    <h1>📦 تتبع حجزك</h1>
+    <p>أدخل رقم الحجز (مثل HJ-2026-0001) أو رقم هاتفك لمعرفة حالة طلبك.</p>
+  </div>
+</section>
+
+<main class="page-gap">
+  <div class="container">
+    <div class="track-card reveal">
+      <form class="track-form contact-form" method="get" autocomplete="off">
+        <input type="search" name="q" value="{{ q }}" placeholder="رقم الحجز أو رقم الهاتف…" aria-label="رقم الحجز أو رقم الهاتف">
+        <button class="btn" type="submit" style="white-space:nowrap;">تتبع</button>
+      </form>
+
+      {% if not_found %}
+        <div class="form-msg err" style="margin-top:18px;">
+          لم نعثر على حجز مطابق. تأكد من رقم الحجز أو رقم الهاتف، أو تواصل معنا مباشرة.
+        </div>
+      {% endif %}
+
+      {% if booking %}
+        <div class="track-result">
+          <div class="track-head">
+            <div>
+              <span class="muted">رقم الحجز</span>
+              <strong class="ref-code">{{ booking.reference_code }}</strong>
+            </div>
+            <span class="status-badge status-{{ booking.status }}">
+              {{ booking.status_label }}
+            </span>
+          </div>
+
+          <div class="track-rows">
+            <div class="track-row"><span class="lbl">الرحلة / الموعد</span><strong>{{ booking.trip_label|default:'غير محدد' }}</strong></div>
+            <div class="track-row"><span class="lbl">اسم العميل</span><strong>{{ booking.name }}</strong></div>
+            <div class="track-row"><span class="lbl">عدد الأفراد</span><strong>{{ booking.people }}</strong></div>
+            <div class="track-row"><span class="lbl">تاريخ الطلب</span><strong>{{ booking.created_at|date:"Y-m-d" }}</strong></div>
+          </div>
+
+          <div class="track-msg status-msg-{{ booking.status }}">
+            {{ booking.status_message }}
+            {% if booking.status == 'confirmed' and booking.confirmed_at %}
+              <span class="msg-date">تم التأكيد بتاريخ {{ booking.confirmed_at|date:"Y-m-d" }}</span>
+            {% endif %}
+          </div>
+
+          {% if site.whatsapp %}
+            <p class="track-help muted">لديك استفسار؟ <a href="{{ whatsapp_href }}" target="_blank" rel="noopener">تواصل معنا عبر واتساب 💬</a></p>
+          {% endif %}
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</main>
+{% endblock %}

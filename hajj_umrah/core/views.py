@@ -9,7 +9,8 @@ from django.shortcuts import get_object_or_404, render
 from django.template.response import TemplateResponse
 from django.utils import timezone
 
-from .models import Booking, SiteSettings, Trip
+from .models import Booking, BookingStatus, SiteSettings, Trip
+from .whatsapp import booking_created_message, send_whatsapp
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +56,7 @@ def about(request):
 def _booking_summary_lines(booking):
     created = timezone.localtime(booking.created_at).strftime('%Y-%m-%d %H:%M')
     lines = [
+        f'رقم الحجز: {booking.reference_code}',
         f'الاسم: {booking.name}',
         f'الهاتف: {booking.phone}',
     ]
@@ -128,6 +130,10 @@ def booking(request):
                 notes=notes,
             )
             _send_booking_emails(booking)
+            try:
+                send_whatsapp(booking.phone, booking_created_message(booking))
+            except Exception:
+                logger.exception('فشل إنشاء إشعار واتساب للحجز')
 
             ok = True
             msg = 'تم استلام طلبك بنجاح، سنتواصل معك في أقرب وقت. جزاكم الله خيراً.'
@@ -139,6 +145,44 @@ def booking(request):
         'form_ok': ok,
     }
     return render(request, 'booking.html', context)
+
+
+def _find_booking(q):
+    query = (q or '').strip()
+    if not query:
+        return None
+    booking = (
+        Booking.objects.filter(reference_code__iexact=query)
+        .order_by('-created_at')
+        .first()
+    )
+    if booking:
+        return booking
+    booking = (
+        Booking.objects.filter(phone__iexact=query)
+        .order_by('-created_at')
+        .first()
+    )
+    if booking:
+        return booking
+    digits = re.sub(r'\D', '', query)
+    if digits:
+        for candidate in Booking.objects.order_by('-created_at').only('pk', 'phone'):
+            if re.sub(r'\D', '', candidate.phone or '') == digits:
+                return candidate
+    return None
+
+
+def track_booking(request):
+    q = (request.GET.get('q') or '').strip()
+    booking = _find_booking(q) if q else None
+    context = {
+        'booking': booking,
+        'not_found': bool(q) and booking is None,
+        'q': q,
+        'track_statuses': BookingStatus.values,
+    }
+    return render(request, 'track_booking.html', context)
 
 
 def not_found(request, exception=None):

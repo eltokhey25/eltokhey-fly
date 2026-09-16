@@ -1,10 +1,19 @@
+from django.conf import settings
 from django.db import models
+from django.utils import timezone
 
 
 class TripType(models.TextChoices):
     HAJJ = 'hajj', 'الحج'
     UMRAH = 'umrah', 'العمرة'
     RAMADAN = 'ramadan', 'عمرة رمضان'
+
+
+class BookingStatus(models.TextChoices):
+    PENDING = 'pending', 'قيد المراجعة'
+    CONFIRMED = 'confirmed', 'تم التأكيد'
+    REJECTED = 'rejected', 'مرفوض'
+    COMPLETED = 'completed', 'مكتمل'
 
 
 class Trip(models.Model):
@@ -56,6 +65,7 @@ class Trip(models.Model):
 
 
 class Booking(models.Model):
+    reference_code = models.CharField('رقم الحجز', max_length=20, unique=True, blank=True)
     name = models.CharField('الاسم الكامل', max_length=255)
     phone = models.CharField('رقم الهاتف', max_length=50)
     email = models.EmailField('البريد الإلكتروني', max_length=254, blank=True)
@@ -63,6 +73,19 @@ class Booking(models.Model):
     trip_type = models.CharField('نوع الرحلة', max_length=50, blank=True)
     people = models.PositiveIntegerField('عدد الأفراد', default=1)
     notes = models.TextField('ملاحظات', blank=True)
+    status = models.CharField(
+        'حالة الحجز', max_length=20, choices=BookingStatus.choices,
+        default=BookingStatus.PENDING,
+    )
+    confirmed_at = models.DateTimeField('تاريخ التأكيد', null=True, blank=True)
+    handled_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        verbose_name='تمت المعالجة بواسطة',
+        related_name='handled_bookings',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -71,7 +94,48 @@ class Booking(models.Model):
         verbose_name_plural = 'طلبات الحجز'
 
     def __str__(self):
-        return f'{self.name} — {self.trip_label or "بدون رحلة محددة"}'
+        return f'{self.reference_code or "—"} — {self.name} — {self.trip_label or "بدون رحلة محددة"}'
+
+    def save(self, *args, **kwargs):
+        if not self.reference_code:
+            self.reference_code = self._generate_reference_code()
+        if self.status == BookingStatus.CONFIRMED and not self.confirmed_at:
+            self.confirmed_at = timezone.now()
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def _generate_reference_code(cls):
+        prefix = f'HJ-{timezone.now().year}-'
+        last = (
+            cls.objects.filter(reference_code__startswith=prefix)
+            .order_by('-reference_code')
+            .values_list('reference_code', flat=True)
+            .first()
+        )
+        number = 1
+        if last:
+            try:
+                number = int(last.rsplit('-', 1)[1]) + 1
+            except (ValueError, IndexError):
+                number = cls.objects.filter(reference_code__startswith=prefix).count() + 1
+        code = f'{prefix}{number:04d}'
+        while cls.objects.filter(reference_code=code).exists():
+            number += 1
+            code = f'{prefix}{number:04d}'
+        return code
+
+    @property
+    def status_label(self):
+        return BookingStatus(self.status).label if self.status in BookingStatus.values else self.status
+
+    @property
+    def status_message(self):
+        return {
+            BookingStatus.PENDING: 'حجزك قيد المراجعة، سنتواصل معك خلال 24 ساعة',
+            BookingStatus.CONFIRMED: 'سيتم التواصل معك قريباً',
+            BookingStatus.REJECTED: 'نأسف، لم نتمكن من تأكيد حجزك. تواصل معنا للمزيد',
+            BookingStatus.COMPLETED: 'تمت رحلتك بنجاح. شكراً لك',
+        }.get(self.status, '')
 
 
 class SiteSettings(models.Model):

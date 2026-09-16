@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
-from .models import Booking, SiteSettings, Trip
+from .models import Booking, BookingStatus, SiteSettings, Trip
 
 
 class PageViewTests(TestCase):
@@ -158,3 +158,128 @@ class BookingEmailTests(TestCase):
 
         self.assertContains(resp, 'تم استلام طلبك بنجاح')
         self.assertEqual(Booking.objects.filter(phone='01000000000').count(), 1)
+
+
+class BookingTrackingTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        SiteSettings.load()
+        Trip.objects.create(
+            name='رحلة تتبع', slug='track-trip', trip_type='umrah', is_active=True
+        )
+
+    def _make_booking(self, name='أحمد', phone='01012345678'):
+        return Booking.objects.create(
+            name=name, phone=phone, trip_label='رحلة تتبع — 2026-12-10'
+        )
+
+    def test_reference_code_auto_generated_and_unique(self):
+        b1 = self._make_booking()
+        b2 = self._make_booking()
+        self.assertRegex(b1.reference_code, r'^HJ-\d{4}-\d{4}$')
+        self.assertNotEqual(b1.reference_code, b2.reference_code)
+        self.assertEqual(
+            Booking.objects.filter(reference_code=b1.reference_code).count(), 1
+        )
+
+    def test_booking_created_message_includes_reference_code(self):
+        with mock.patch('core.views.send_whatsapp') as ws, \
+                mock.patch('core.views._send_booking_emails'):
+            self.client.post(reverse('core:booking'), {
+                'hu_name': 'محمود',
+                'hu_phone': '01098765432',
+                'hu_departure': 'رحلة تتبع',
+                'hu_type': 'عمرة',
+            })
+        ws.assert_called_once()
+        booking = Booking.objects.get(phone='01098765432')
+        self.assertIn(booking.reference_code, ws.call_args.args[1])
+
+    def test_tracking_finds_by_code(self):
+        booking = self._make_booking()
+        resp = self.client.get(reverse('core:track_booking'), {'q': booking.reference_code})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, booking.reference_code)
+        self.assertContains(resp, booking.name)
+        self.assertContains(resp, 'قيد المراجعة')
+
+    def test_tracking_finds_by_phone(self):
+        booking = self._make_booking()
+        resp = self.client.get(reverse('core:track_booking'), {'q': booking.phone})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, booking.reference_code)
+        self.assertContains(resp, booking.name)
+
+    def test_tracking_unknown_code_shows_message(self):
+        resp = self.client.get(reverse('core:track_booking'), {'q': 'HJ-2000-9999'})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'لم نعثر على حجز مطابق')
+
+    def test_tracking_confirmed_booking(self):
+        booking = self._make_booking()
+        booking.status = BookingStatus.CONFIRMED
+        booking.save()
+        resp = self.client.get(reverse('core:track_booking'), {'q': booking.reference_code})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'سيتم التواصل معك قريباً')
+        self.assertContains(resp, 'تم التأكيد')
+
+    def test_tracking_completed_booking(self):
+        booking = self._make_booking()
+        booking.status = BookingStatus.COMPLETED
+        booking.save()
+        resp = self.client.get(reverse('core:track_booking'), {'q': booking.reference_code})
+        self.assertContains(resp, 'تمت رحلتك بنجاح')
+
+
+class BookingActionTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            'staff', 'staff@example.com', 'pass123', is_staff=True
+        )
+        self.client.login(username='staff', password='pass123')
+        SiteSettings.load()
+        self.booking = Booking.objects.create(name='محمد', phone='01000000000', trip_label='رحلة')
+
+    def test_confirm_updates_status_and_sends_whatsapp(self):
+        with mock.patch('dashboard.views.send_whatsapp') as ws:
+            resp = self.client.post(reverse('dashboard:booking_confirm', args=[self.booking.pk]))
+        self.assertRedirects(resp, reverse('dashboard:booking_detail', args=[self.booking.pk]))
+        self.booking.refresh_from_db()
+        self.assertEqual(self.booking.status, BookingStatus.CONFIRMED)
+        self.assertIsNotNone(self.booking.confirmed_at)
+        self.assertEqual(self.booking.handled_by, self.user)
+        ws.assert_called_once()
+        self.assertIn('✅', ws.call_args.args[1])
+        self.assertIn(self.booking.reference_code, ws.call_args.args[1])
+
+    def test_reject_updates_status_and_sends_whatsapp(self):
+        with mock.patch('dashboard.views.send_whatsapp') as ws:
+            resp = self.client.post(reverse('dashboard:booking_reject', args=[self.booking.pk]))
+        self.assertRedirects(resp, reverse('dashboard:booking_detail', args=[self.booking.pk]))
+        self.booking.refresh_from_db()
+        self.assertEqual(self.booking.status, BookingStatus.REJECTED)
+        ws.assert_called_once()
+        self.assertIn('❌', ws.call_args.args[1])
+
+    def test_complete_updates_status(self):
+        self.booking.status = BookingStatus.CONFIRMED
+        self.booking.save()
+        resp = self.client.post(reverse('dashboard:booking_complete', args=[self.booking.pk]))
+        self.assertRedirects(resp, reverse('dashboard:booking_detail', args=[self.booking.pk]))
+        self.booking.refresh_from_db()
+        self.assertEqual(self.booking.status, BookingStatus.COMPLETED)
+
+    def test_confirm_requires_post(self):
+        resp = self.client.get(reverse('dashboard:booking_confirm', args=[self.booking.pk]))
+        self.assertEqual(resp.status_code, 405)
+
+    def test_booking_list_status_filter(self):
+        pending = self.booking
+        confirmed = Booking.objects.create(
+            name='سعيد', phone='01011111111', status=BookingStatus.CONFIRMED
+        )
+        resp = self.client.get(reverse('dashboard:bookings'), {'status': 'confirmed'})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'سعيد')
+        self.assertNotContains(resp, pending.name)

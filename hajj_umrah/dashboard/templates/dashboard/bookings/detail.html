@@ -14,6 +14,22 @@
   </div>
 </div>
 
+<div class="panel" style="margin-bottom:20px;">
+  <div class="panel-body" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+    <div>
+      <span class="muted" style="display:block;">رقم الحجز (شاركه مع العميل لتتبع الحجز)</span>
+      <strong class="ltr" style="font-size:1.35rem;color:var(--primary);">{{ booking.reference_code }}</strong>
+    </div>
+    <span style="font-size:1rem;">
+      {% if booking.status == 'pending' %}<span class="badge badge-gold">قيد المراجعة</span>
+      {% elif booking.status == 'confirmed' %}<span class="badge badge-green">تم التأكيد</span>
+      {% elif booking.status == 'rejected' %}<span class="badge badge-red">مرفوض</span>
+      {% elif booking.status == 'completed' %}<span class="badge badge-blue">مكتمل</span>
+      {% else %}<span class="badge badge-gray">{{ booking.status }}</span>{% endif %}
+    </span>
+  </div>
+</div>
+
 <div class="grid-2">
   <div class="panel">
     <div class="panel-head"><h3>بيانات الطلب</h3></div>
@@ -38,13 +54,44 @@
         <li style="display:flex;justify-content:space-between;border-bottom:1px solid var(--border);padding:8px 0;">
           <span class="muted">عدد الأفراد</span><strong>{{ booking.people }}</strong>
         </li>
-        <li style="display:flex;justify-content:space-between;padding:8px 0;">
-          <span class="muted">تاريخ الطلب</span><strong>{{ booking.created_at|date:"Y-m-d H:i" }}</strong>
-        </li>
+        {% if booking.confirmed_at %}
+          <li style="display:flex;justify-content:space-between;border-bottom:1px solid var(--border);padding:8px 0;">
+            <span class="muted">تاريخ التأكيد</span><strong>{{ booking.confirmed_at|date:"Y-m-d H:i" }}</strong>
+          </li>
+        {% endif %}
+        {% if booking.handled_by %}
+          <li style="display:flex;justify-content:space-between;padding:8px 0;">
+            <span class="muted">تمت المعالجة بواسطة</span><strong>{{ booking.handled_by.get_full_name|default:booking.handled_by.username }}</strong>
+          </li>
+        {% endif %}
       </ul>
 
       <div style="display:flex;gap:8px;margin-top:18px;flex-wrap:wrap;">
+        {% if wa_url %}
+          <a class="btn" href="{{ wa_url }}" target="_blank" rel="noopener">💬 واتساب للعميل</a>
+        {% endif %}
         <a class="btn" href="tel:{{ booking.phone }}">📞 الاتصال</a>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">
+        {% if booking.status != 'confirmed' %}
+          <form method="post" action="{% url 'dashboard:booking_confirm' booking.pk %}" data-confirm="تأكيد حجز «{{ booking.name }}» رقم {{ booking.reference_code }}؟">
+            {% csrf_token %}
+            <button class="btn" type="submit">✅ تأكيد الحجز</button>
+          </form>
+        {% endif %}
+        {% if booking.status != 'rejected' and booking.status != 'completed' %}
+          <form method="post" action="{% url 'dashboard:booking_reject' booking.pk %}" data-confirm="رفض حجز «{{ booking.name }}» رقم {{ booking.reference_code }}؟">
+            {% csrf_token %}
+            <button class="btn btn-warning" type="submit">⛔ رفض الحجز</button>
+          </form>
+        {% endif %}
+        {% if booking.status == 'confirmed' %}
+          <form method="post" action="{% url 'dashboard:booking_complete' booking.pk %}" data-confirm="تحديد حجز «{{ booking.name }}» كرحلة مكتملة؟">
+            {% csrf_token %}
+            <button class="btn" type="submit">🏁 تمّت الرحلة</button>
+          </form>
+        {% endif %}
         <form method="post" action="{% url 'dashboard:booking_delete' booking.pk %}" data-confirm="حذف طلب الحجز هذا نهائياً؟">
           {% csrf_token %}
           <button class="btn btn-danger" type="submit">🗑 حذف الطلب</button>
