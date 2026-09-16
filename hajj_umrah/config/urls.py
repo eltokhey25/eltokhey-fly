@@ -6,6 +6,7 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.contrib.sitemaps.views import sitemap as sitemap_view
 from django.urls import include, path, re_path
+from django.views.generic import TemplateView
 from django.views.static import serve as media_serve
 
 from core.sitemaps import StaticViewSitemap, TripSitemap
@@ -25,6 +26,14 @@ urlpatterns = [
         sitemap_view,
         {'sitemaps': sitemaps},
         name='django.contrib.sitemaps.views.sitemap',
+    ),
+    path(
+        'google949f04ecbcd2e64b.html',
+        TemplateView.as_view(
+            template_name='google949f04ecbcd2e64b.html',
+            content_type='text/html'
+        ),
+        name='google_verification',
     ),
     path('', include('core.urls')),
 ]
