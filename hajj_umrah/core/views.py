@@ -4,6 +4,7 @@ from urllib.parse import quote
 from django.core.mail import send_mail
 from django.http import Http404
 from django.shortcuts import get_object_or_404, render
+from django.template.response import TemplateResponse
 
 from .models import Booking, SiteSettings, Trip
 
@@ -103,3 +104,7 @@ def booking(request):
 
 def not_found(request, exception=None):
     return render(request, '404.html', status=404)
+
+
+def robots_txt(request):
+    return TemplateResponse(request, 'robots.txt', content_type='text/plain')

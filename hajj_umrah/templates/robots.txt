@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard/
+Disallow: /admin/
+
+Sitemap: https://eltokhey.pythonanywhere.com/sitemap.xml

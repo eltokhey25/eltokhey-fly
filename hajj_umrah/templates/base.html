@@ -4,7 +4,16 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}{{ site.company }}{% endblock %}</title>
+  <title>{% block title %}{{ site.company }} — رحلات الحج والعمرة في مصر{% endblock %}</title>
+  <meta name="description" content="{% block meta_description %}{{ site.company }} — وكلاء رسميون لتنظيم رحلات الحج والعمرة في مصر، برنامج سير مفصّل، مرافقون معتمدون وإقامة قريبة من الحرمين الشريفين. احجز الآن.{% endblock %}">
+  <link rel="canonical" href="{% block canonical %}{{ request.scheme }}://{{ request.get_host }}{{ request.path }}{% endblock %}">
+  <meta property="og:site_name" content="{{ site.company }}">
+  <meta property="og:locale" content="ar_AR">
+  <meta property="og:type" content="{% block og_type %}website{% endblock %}">
+  <meta property="og:title" content="{% block og_title %}{{ site.company }} — رحلات الحج والعمرة في مصر{% endblock %}">
+  <meta property="og:description" content="{% block og_description %}{{ site.company }} — وكلاء رسميون لتنظيم رحلات الحج والعمرة في مصر، برنامج سير مفصّل، مرافقون معتمدون وإقامة قريبة من الحرمين الشريفين. احجز الآن.{% endblock %}">
+  <meta property="og:url" content="{% block og_url %}{{ request.scheme }}://{{ request.get_host }}{{ request.path }}{% endblock %}">
+  {% block og_image %}<meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{% static 'img/kaaba.jpg' %}">{% endblock %}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'css/main.css' %}">
@@ -70,14 +79,12 @@
   <div class="footer-bottom">
     <div class="container">
       <span class="footer-copy">© {% now "Y" %} {{ site.company }} — جميع الحقوق محفوظة.</span>
-      {% if site.facebook %}
-        <span class="footer-credit">
-          <span class="credit-label">Developed by</span>
-          <a href="{{ site.facebook }}" target="_blank" rel="noopener" aria-label="Engineer Mohamed El-Tokhey on Facebook">
-            <strong>مهندس محمد الطوخي</strong>
-          </a>
-        </span>
-      {% endif %}
+      <span class="footer-credit">
+        <span class="credit-label">Developed by</span>
+        <a href="https://www.facebook.com/Eltokhey25" target="_blank" rel="noopener noreferrer" aria-label="محمد الطوخي على فيسبوك">
+          <strong>محمد الطوخي</strong>
+        </a>
+      </span>
     </div>
   </div>
 </footer>

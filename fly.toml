@@ -1,0 +1,22 @@
+app = "eltokhey-hajj"
+primary_region = "ams"
+
+[build]
+
+[env]
+  DJANGO_DEBUG = "False"
+  DJANGO_ALLOWED_HOSTS = "eltokhey-hajj.fly.dev"
+  DJANGO_DB_PATH = "/data/db.sqlite3"
+  DJANGO_MEDIA_ROOT = "/data/media"
+  PORT = "8080"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0
+
+[mounts]
+  source = "data_volume"
+  destination = "/data"

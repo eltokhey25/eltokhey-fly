@@ -1,0 +1,10 @@
+venv
+.env
+.env.save
+_old-php-backup
+.git
+**/__pycache__
+*.pyc
+hajj_umrah/db.sqlite3
+hajj_umrah/staticfiles
+hajj_umrah/media

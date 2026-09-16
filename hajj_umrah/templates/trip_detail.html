@@ -4,6 +4,16 @@
 
 {% block title %}{{ trip.name }} — {{ site.company }}{% endblock %}
 
+{% block og_title %}{{ trip.name }} — {{ site.company }}{% endblock %}
+
+{% block meta_description %}{% if trip.description %}{{ trip.description|truncatechars:160 }}{% else %}تفاصيل رحلة {{ trip.name }} مع {{ site.company }}: موعد الخروج، برنامج السير، السعر، وتشمل الأسعار. احجز مكانك الآن.{% endif %}{% endblock %}
+
+{% block og_description %}{% if trip.description %}{{ trip.description|truncatechars:160 }}{% else %}تفاصيل رحلة {{ trip.name }} مع {{ site.company }}: موعد الخروج، برنامج السير، السعر، وتشمل الأسعار. احجز مكانك الآن.{% endif %}{% endblock %}
+
+{% block og_type %}article{% endblock %}
+
+{% block og_image %}{% if trip.thumbnail %}<meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{{ trip.thumbnail.url }}">{% endif %}{% endblock %}
+
 {% block body_class %}single-trip{% endblock %}
 
 {% block extra_js %}
