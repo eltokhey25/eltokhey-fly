@@ -1,0 +1,19 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}غير مصرح بالوصول{% endblock %}
+{% block page_title %}403 — غير مصرح{% endblock %}
+
+{% block content %}
+<div class="panel">
+  <div class="empty" style="padding:56px 24px;">
+    <span class="empty-ico">🔒</span>
+    <h1 style="margin:0 0 10px;">403 — غير مصرح بالوصول</h1>
+    <p>عذراً، ليس لديك الصلاحية اللازمة للوصول إلى هذه الصفحة.</p>
+    <p class="muted" style="margin-top:4px;">هذه المنطقة مخصصة لمدير النظام فقط، ولا يمكن لمجرد المشرفين الدخول إليها.</p>
+    <div style="margin-top:22px;">
+      <a class="btn" href="{% url 'dashboard:overview' %}">↩ العودة إلى لوحة التحكم</a>
+      <a class="btn btn-ghost" href="{% url 'core:home' %}">🏠 الموقع الرئيسي</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

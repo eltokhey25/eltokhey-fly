@@ -1,10 +1,11 @@
 from datetime import timedelta
 
 from django.contrib import messages
-from django.contrib.auth import get_user_model
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth import get_user_model, logout
 from django.contrib.auth.views import LoginView, LogoutView
+from django.core.exceptions import PermissionDenied
 from django.db.models import Q, Sum
+from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -21,6 +22,7 @@ from .forms import (
     UserForm,
 )
 from .models import MediaFile
+from .permissions import staff_required, superuser_required
 
 User = get_user_model()
 
@@ -33,8 +35,8 @@ SECTION_LABELS = {
 }
 
 
-def staff_required(view):
-    return login_required(view, login_url='dashboard:login')
+def permission_denied(request, exception=None):
+    return render(request, 'dashboard/403.html', status=403)
 
 
 @staff_required
@@ -279,16 +281,16 @@ def media_delete(request, pk):
 
 
 # --------------------------------------------------------------------------
-# Users
+# Users (superusers only)
 # --------------------------------------------------------------------------
-@staff_required
+@superuser_required
 def user_list(request):
     users = User.objects.all().order_by('-is_superuser', '-is_staff', 'username')
     context = {'users': users, 'page': 'users'}
     return render(request, 'dashboard/users/list.html', context)
 
 
-@staff_required
+@superuser_required
 def user_create(request):
     form = UserForm(request.POST or None)
     if request.method == 'POST' and form.is_valid():
@@ -302,11 +304,15 @@ def user_create(request):
     return render(request, 'dashboard/users/form.html', context)
 
 
-@staff_required
+@superuser_required
 def user_edit(request, pk):
     user = get_object_or_404(User, pk=pk)
     form = UserForm(request.POST or None, instance=user)
     if request.method == 'POST' and form.is_valid():
+        if user == request.user:
+            data = form.cleaned_data
+            if not (data.get('is_superuser') and data.get('is_staff') and data.get('is_active')):
+                raise PermissionDenied('لا يمكنك إزالة صلاحياتك أو تعطيل حسابك الحالي.')
         user = form.save()
         messages.success(request, f'تم حفظ بيانات المستخدم «{user.username}».')
         return redirect('dashboard:user_edit', pk=user.pk)
@@ -314,13 +320,12 @@ def user_edit(request, pk):
     return render(request, 'dashboard/users/form.html', context)
 
 
-@staff_required
+@superuser_required
 @require_POST
 def user_delete(request, pk):
     user = get_object_or_404(User, pk=pk)
     if user == request.user:
-        messages.error(request, 'لا يمكنك حذف حسابك الحالي.')
-        return redirect('dashboard:users')
+        raise PermissionDenied('لا يمكنك حذف حسابك الحالي.')
     messages.success(request, f'تم حذف المستخدم «{user.username}».')
     user.delete()
     return redirect('dashboard:users')
@@ -357,9 +362,24 @@ class DashboardLoginView(LoginView):
     def get_redirect_url(self):
         return reverse('dashboard:overview')
 
+    def dispatch(self, request, *args, **kwargs):
+        if self.redirect_authenticated_user and request.user.is_authenticated:
+            if request.user.is_staff or request.user.is_superuser:
+                return HttpResponseRedirect(self.get_redirect_url())
+            logout(request)
+        return super().dispatch(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        user = self.request.user
+        if not (user.is_staff or user.is_superuser):
+            logout(self.request)
+            messages.error(self.request, 'هذا الحساب ليس لديه صلاحية دخول لوحة التحكم.')
+            return redirect('dashboard:login')
+        return response
+
 
 @staff_required
 def dashboard_logout(request):
-    from django.contrib.auth import logout
     logout(request)
     return redirect('dashboard:login')

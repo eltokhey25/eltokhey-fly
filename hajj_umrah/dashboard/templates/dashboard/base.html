@@ -38,8 +38,8 @@
       </div>
       <div class="sidebar-nav-group">
         <div class="group-title">النظام</div>
-        <a href="{% url 'dashboard:users' %}" class="{% if page == 'users' %}active{% endif %}"><span class="nav-ico">👥</span> المستخدمون</a>
         {% if request.user.is_superuser %}
+          <a href="{% url 'dashboard:users' %}" class="{% if page == 'users' %}active{% endif %}"><span class="nav-ico">👥</span> المستخدمون</a>
           <a href="{% url 'admin:index' %}"><span class="nav-ico">🛠</span> Django Admin</a>
         {% endif %}
       </div>

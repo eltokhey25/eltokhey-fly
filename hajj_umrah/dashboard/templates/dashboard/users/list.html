@@ -17,7 +17,7 @@
     {% if users %}
       <table class="table">
         <thead>
-          <tr><th>المستخدم</th><th>الصلاحيات</th><th>نشط</th><th>آخر دخول</th><th></th></tr>
+          <tr><th>المستخدم</th><th>البريد الإلكتروني</th><th>الدور</th><th>نشط</th><th>تاريخ الانضمام</th><th></th></tr>
         </thead>
         <tbody>
           {% for user in users %}
@@ -26,6 +26,9 @@
                 <strong>{{ user.username }}</strong>
                 {% if user == request.user %}<span class="badge badge-teal" style="margin-inline-start:6px;">أنت</span>{% endif %}
                 {% if user.get_full_name %}<br><span class="muted">{{ user.get_full_name }}</span>{% endif %}
+              </td>
+              <td>
+                {% if user.email %}<span class="muted ltr">{{ user.email }}</span>{% else %}<span class="muted">—</span>{% endif %}
               </td>
               <td>
                 {% if user.is_superuser %}
@@ -39,7 +42,7 @@
               <td>
                 {% if user.is_active %}<span class="badge badge-green">نشط</span>{% else %}<span class="badge badge-red">معطّل</span>{% endif %}
               </td>
-              <td><span class="muted">{{ user.last_login|date:"Y-m-d H:i"|default:'لم يسجل بعد' }}</span></td>
+              <td><span class="muted">{{ user.date_joined|date:"Y-m-d" }}</span></td>
               <td>
                 <div class="row-actions">
                   <a class="btn btn-outline btn-sm" href="{% url 'dashboard:user_edit' user.pk %}">تعديل</a>

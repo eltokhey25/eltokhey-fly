@@ -18,6 +18,17 @@
       <p>سجّل دخولك لإدارة رحلات الحج والعمرة</p>
     </div>
 
+    {% if messages %}
+      <div class="alerts" style="margin-bottom:16px;">
+        {% for message in messages %}
+          <div class="alert alert-error">
+            <span>{{ message }}</span>
+            <button type="button" class="alert-x" onclick="this.closest('.alert').remove()">✕</button>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
     {% if form.errors %}
       <div class="form-errors" style="margin-bottom:16px;">
         اسم المستخدم أو كلمة المرور غير صحيحة. حاول مرة أخرى.
