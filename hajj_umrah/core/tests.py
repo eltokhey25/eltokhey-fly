@@ -1,4 +1,5 @@
 from unittest import mock
+from urllib.parse import unquote
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
@@ -223,6 +224,49 @@ class BookingTrackingTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, 'سيتم التواصل معك قريباً')
         self.assertContains(resp, 'تم التأكيد')
+
+    def _wa_text(self, resp):
+        content = resp.content.decode()
+        for chunk in content.split('class="track-wa"')[1:]:
+            href = chunk.split('href="')[1].split('"')[0]
+            return unquote(href.split('?text=')[1])
+        return ''
+
+    def test_tracking_confirmed_has_prefilled_whatsapp_link(self):
+        settings = SiteSettings.load()
+        settings.whatsapp = '+20 100 1234567'
+        settings.save()
+        booking = self._make_booking(name='يوسف')
+        booking.status = BookingStatus.CONFIRMED
+        booking.save()
+        resp = self.client.get(reverse('core:track_booking'), {'q': booking.reference_code})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'wa.me/201001234567?text=')
+        self.assertContains(resp, 'تواصل عبر واتساب بخصوص الحجز')
+        self.assertContains(resp, 'noopener noreferrer')
+        message = self._wa_text(resp)
+        self.assertIn('أتابع بخصوص حجزي المؤكد', message)
+        self.assertIn(booking.reference_code, message)
+        self.assertIn('يوسف', message)
+        self.assertIn('رحلة تتبع', message)
+        self.assertIn('برجاء تزويدي بتفاصيل الدفع والمواعيد النهائية', message)
+
+    def test_tracking_pending_has_prefilled_whatsapp_link(self):
+        settings = SiteSettings.load()
+        settings.whatsapp = '+20 100 1234567'
+        settings.save()
+        booking = self._make_booking(name='كريم')
+        booking.status = BookingStatus.PENDING
+        booking.save()
+        resp = self.client.get(reverse('core:track_booking'), {'q': booking.reference_code})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'wa.me/201001234567?text=')
+        self.assertContains(resp, 'تواصل عبر واتساب بخصوص الحجز')
+        message = self._wa_text(resp)
+        self.assertIn('بتابع بخصوص حجزي قيد المراجعة', message)
+        self.assertIn(booking.reference_code, message)
+        self.assertIn('كريم', message)
+        self.assertIn('برجاء إفادتي بحالة الحجز', message)
 
     def test_tracking_completed_booking(self):
         booking = self._make_booking()

@@ -1385,6 +1385,35 @@ a:hover {
   font-weight: 700;
 }
 
+.track-follow {
+  margin-top: 18px;
+  text-align: center;
+}
+
+.track-follow .track-help {
+  margin-top: 10px;
+}
+
+.track-wa {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #25d366;
+  color: #ffffff !important;
+  font-weight: 700;
+  font-size: 0.95rem;
+  padding: 12px 24px;
+  border-radius: 50px;
+  box-shadow: 0 10px 24px rgba(37, 211, 102, 0.35);
+  transition: 0.2s;
+}
+
+.track-wa:hover {
+  background: #1fb959;
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
 /* ===== Utility ===== */
 .text-center {
   text-align: center;

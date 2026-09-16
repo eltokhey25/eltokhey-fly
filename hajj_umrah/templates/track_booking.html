@@ -57,7 +57,19 @@
           </div>
 
           {% if site.whatsapp %}
-            <p class="track-help muted">لديك استفسار؟ <a href="{{ whatsapp_href }}" target="_blank" rel="noopener">تواصل معنا عبر واتساب 💬</a></p>
+            {% if booking.status == 'confirmed' %}
+              <div class="track-follow">
+                <a class="track-wa" href="https://wa.me/{{ site.whatsapp|cut:'+'|cut:' ' }}?text={{ wa_confirmed_msg|urlencode }}" target="_blank" rel="noopener noreferrer" aria-label="تواصل عبر واتساب بخصوص الحجز">💬 تواصل معنا بخصوص الحجز</a>
+                <p class="track-help muted">استفسار عن الدفع أو المواعيد النهائية؟ نواصل معك عبر واتساب.</p>
+              </div>
+            {% elif booking.status == 'pending' %}
+              <div class="track-follow">
+                <a class="track-wa" href="https://wa.me/{{ site.whatsapp|cut:'+'|cut:' ' }}?text={{ wa_pending_msg|urlencode }}" target="_blank" rel="noopener noreferrer" aria-label="تواصل عبر واتساب بخصوص الحجز">💬 استفسر عن حالة حجزك</a>
+                <p class="track-help muted">يتم الآن مراجعة طلبك، يمكنك التواصل معنا للاستفسار.</p>
+              </div>
+            {% else %}
+              <p class="track-help muted">لديك استفسار؟ <a href="{{ whatsapp_href }}" target="_blank" rel="noopener">تواصل معنا عبر واتساب 💬</a></p>
+            {% endif %}
           {% endif %}
         </div>
       {% endif %}

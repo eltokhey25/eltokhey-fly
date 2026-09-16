@@ -10,7 +10,12 @@ from django.template.response import TemplateResponse
 from django.utils import timezone
 
 from .models import Booking, BookingStatus, SiteSettings, Trip
-from .whatsapp import booking_created_message, send_whatsapp
+from .whatsapp import (
+    booking_created_message,
+    booking_track_confirmed_message,
+    booking_track_pending_message,
+    send_whatsapp,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -181,6 +186,8 @@ def track_booking(request):
         'not_found': bool(q) and booking is None,
         'q': q,
         'track_statuses': BookingStatus.values,
+        'wa_confirmed_msg': booking_track_confirmed_message(booking) if booking else '',
+        'wa_pending_msg': booking_track_pending_message(booking) if booking else '',
     }
     return render(request, 'track_booking.html', context)
 

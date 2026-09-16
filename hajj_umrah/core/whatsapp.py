@@ -47,3 +47,28 @@ def booking_confirmed_message(booking):
 
 def booking_rejected_message(booking):
     return f'❌ نأسف، لم نتمكن من تأكيد حجزك رقم {booking.reference_code}'
+
+
+def booking_track_confirmed_message(booking):
+    trip = booking.trip_label or 'غير محدد'
+    return (
+        'السلام عليكم،\n'
+        'أتابع بخصوص حجزي المؤكد:\n\n'
+        f'🎫 رقم الحجز: {booking.reference_code}\n'
+        f'👤 الاسم: {booking.name}\n'
+        f'🕋 الرحلة: {trip}\n'
+        f'👥 عدد الأفراد: {booking.people}\n'
+        f'📞 رقم التواصل: {booking.phone}\n\n'
+        'برجاء تزويدي بتفاصيل الدفع والمواعيد النهائية.\n'
+        'شكراً لكم.'
+    )
+
+
+def booking_track_pending_message(booking):
+    return (
+        'السلام عليكم،\n'
+        'بتابع بخصوص حجزي قيد المراجعة:\n\n'
+        f'🎫 رقم الحجز: {booking.reference_code}\n'
+        f'👤 الاسم: {booking.name}\n\n'
+        'برجاء إفادتي بحالة الحجز.'
+    )
