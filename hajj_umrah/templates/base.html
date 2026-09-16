@@ -1,0 +1,100 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ site.company }}{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/main.css' %}">
+  <script src="{% static 'js/main.js' %}" defer></script>
+  {% block extra_js %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+<header class="site-header">
+  <div class="header-top">
+    <div class="container">
+      <span>🌙 وكلاء رسميون للحج والعمرة — نخدمكم على مدار العام</span>
+      {% if site.phone %}
+        <a href="{{ phone_tel_href }}">📞 {{ site.phone }}</a>
+      {% endif %}
+    </div>
+  </div>
+  <div class="container header-main">
+    <a class="site-logo" href="{% url 'core:home' %}">
+      <span class="logo-mark">🕋</span>
+      <span>{{ site.company }}</span>
+    </a>
+    <nav class="main-nav" id="main-nav">
+      <button class="nav-close" id="nav-close" aria-label="إغلاق القائمة">✕</button>
+      <ul>
+        <li><a href="{% url 'core:home' %}">الرئيسية</a></li>
+        <li><a href="{% url 'core:trips' %}">رحلاتنا</a></li>
+        <li><a href="{% url 'core:about' %}">من نحن</a></li>
+      </ul>
+      <a class="btn" href="{% url 'core:booking' %}">احجز الآن</a>
+    </nav>
+    <button class="nav-toggle" id="nav-toggle" aria-label="القائمة">☰</button>
+  </div>
+</header>
+
+{% block content %}{% endblock %}
+
+<footer class="site-footer">
+  <div class="container footer-grid reveal">
+    <div>
+      <h3>{{ site.company }}</h3>
+      <p>نساعدك على أداء مناسك الحج والعمرة بأفضل صورة، مع برنامج سير منظَّم ومرافقين معتمدين، منذ لحظة الخروج من مقر إقامتك حتى عودتك إليها.</p>
+    </div>
+    <div>
+      <h3>روابط سريعة</h3>
+      <ul>
+        <li><a href="{% url 'core:home' %}">الرئيسية</a></li>
+        <li><a href="{% url 'core:trips' %}">رحلاتنا</a></li>
+        <li><a href="{% url 'core:booking' %}">تواصل / حجز</a></li>
+        <li><a href="{% url 'core:about' %}">من نحن</a></li>
+      </ul>
+    </div>
+    <div>
+      <h3>بيانات التواصل</h3>
+      <ul>
+        {% if site.phone %}<li><a href="{{ phone_tel_href }}">📞 {{ site.phone }}</a></li>{% endif %}
+        {% if site.whatsapp %}<li><a href="{{ whatsapp_href }}" target="_blank" rel="noopener">💬 واتساب: {{ site.whatsapp }}</a></li>{% endif %}
+        {% if site.email %}<li><a href="mailto:{{ site.email }}">✉️ {{ site.email }}</a></li>{% endif %}
+        {% if site.address %}<li>📍 {{ site.address }}</li>{% endif %}
+        {% if site.facebook %}<li><a href="{{ site.facebook }}" target="_blank" rel="noopener">فيسبوك</a></li>{% endif %}
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <div class="container">
+      <span class="footer-copy">© {% now "Y" %} {{ site.company }} — جميع الحقوق محفوظة.</span>
+      {% if site.facebook %}
+        <span class="footer-credit">
+          <span class="credit-label">Developed by</span>
+          <a href="{{ site.facebook }}" target="_blank" rel="noopener" aria-label="Engineer Mohamed El-Tokhey on Facebook">
+            <strong>مهندس محمد الطوخي</strong>
+          </a>
+        </span>
+      {% endif %}
+    </div>
+  </div>
+</footer>
+
+{% if site.phone %}
+  <a class="fab fab-call" href="{{ phone_tel_href }}" aria-label="اتصال سريع">📞</a>
+{% endif %}
+{% if site.whatsapp %}
+  <a class="fab fab-wa" href="{{ whatsapp_href }}" target="_blank" rel="noopener" aria-label="تواصل عبر واتساب">💬</a>
+{% endif %}
+
+{% if request.user.is_staff and request.GET.edit %}
+  <link rel="stylesheet" href="{% static 'dashboard/css/inline.css' %}">
+  <script>
+    window.DATA_AUTH = { is_staff: true, dash_base: '{% url 'dashboard:overview' %}' };
+  </script>
+  <script src="{% static 'dashboard/js/inline.js' %}" defer></script>
+{% endif %}
+</body>
+</html>

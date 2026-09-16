@@ -1,0 +1,62 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}طلبات الحجز{% endblock %}
+{% block page_title %}طلبات الحجز{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>إدارة طلبات الحجز</h1>
+    <p>جميع طلبات الحجز الواردة من صفحة التواصل على الموقع.</p>
+  </div>
+  <a class="btn" href="{% url 'dashboard:booking_add' %}">+ إضافة طلب يدوي</a>
+</div>
+
+<div class="panel">
+  <div class="panel-head">
+    <form method="get" style="display:flex;gap:8px;">
+      <input class="input" type="search" name="q" placeholder="بحث بالاسم أو الهاتف أو الرحلة…" value="{{ q }}">
+      <button class="btn btn-ghost btn-sm" type="submit">بحث</button>
+    </form>
+  </div>
+
+  <div class="panel-body-flush table-wrap">
+    {% if bookings %}
+      <table class="table">
+        <thead>
+          <tr><th>الاسم</th><th>الهاتف</th><th>الرحلة / الموعد</th><th>النوع</th><th>الأفراد</th><th>التاريخ</th><th></th></tr>
+        </thead>
+        <tbody>
+          {% for booking in bookings %}
+            <tr>
+              <td><a href="{% url 'dashboard:booking_detail' booking.pk %}"><strong>{{ booking.name }}</strong></a></td>
+              <td><span class="muted ltr">{{ booking.phone }}</span></td>
+              <td>{{ booking.trip_label|truncatechars:40 }}</td>
+              <td>
+                {% if booking.trip_type %}
+                  <span class="badge badge-blue">{{ booking.trip_type }}</span>
+                {% else %}
+                  <span class="badge badge-gray">عام</span>
+                {% endif %}
+              </td>
+              <td>{{ booking.people }}</td>
+              <td><span class="muted">{{ booking.created_at|date:"Y-m-d H:i" }}</span></td>
+              <td>
+                <div class="row-actions">
+                  <a class="btn btn-ghost btn-sm" href="{% url 'dashboard:booking_detail' booking.pk %}">عرض</a>
+                  <form method="post" action="{% url 'dashboard:booking_delete' booking.pk %}" data-confirm="حذف طلب الحجز الخاص بـ «{{ booking.name }}»؟">
+                    {% csrf_token %}
+                    <button class="btn btn-danger-ghost btn-sm" type="submit">حذف</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <div class="empty"><span class="empty-ico">📭</span><p>لا توجد طلبات حجز مطابقة.</p></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

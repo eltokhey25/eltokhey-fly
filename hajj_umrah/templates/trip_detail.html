@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}{{ trip.name }} — {{ site.company }}{% endblock %}
+
+{% block body_class %}single-trip{% endblock %}
+
+{% block extra_js %}
+  <script src="{% static 'js/trip.js' %}" defer></script>
+{% endblock %}
+
+{% block content %}
+<section class="trip-hero">
+  <div class="container reveal">
+    <h1>{{ trip.name }}</h1>
+    <span class="trip-type-badge">{{ trip.get_trip_type_display }}</span>
+    <div class="badges">
+      {% if trip.departure %}<span>📅 الخروج: {{ trip.departure|date:"Y-m-d" }}</span>{% endif %}
+      {% if trip.return_date %}<span>↩️ العودة: {{ trip.return_date|date:"Y-m-d" }}</span>{% endif %}
+      {% if trip.duration %}<span>⏱ المدة: {{ trip.duration }}</span>{% endif %}
+      {% if trip.transport %}<span>🚌 {{ trip.transport }}</span>{% endif %}
+    </div>
+  </div>
+</section>
+
+<div class="container trip-page">
+  <div class="trip-content reveal-left">
+    {% if trip.description %}
+      <div class="trip-desc" style="margin-top:0;">
+        <h2 style="margin:0 0 10px;">نبذة عن الرحلة</h2>
+        <p style="color:var(--ink);text-shadow:none;">{{ trip.description|linebreaksbr }}</p>
+      </div>
+    {% endif %}
+
+    <h2>برنامج السير بالتفصيل</h2>
+    <p class="cta-sub" style="margin-bottom:20px;">يبدأ البرنامج من مكان الخروج وصولاً إلى العودة، بالترتيب الزمني الذي تسير به الرحلة.</p>
+
+    {% if trip.itinerary %}
+      <ol class="timeline">
+        {% for step in trip.itinerary %}
+          <li class="timeline-item reveal">
+            <span class="timeline-dot">{{ forloop.counter }}</span>
+            <div class="timeline-card">
+              {% if step.city %}
+                <span class="step-city">📍 {{ step.city }}</span>
+              {% endif %}
+              <h3>{{ step.title }}</h3>
+              {% if step.desc %}
+                <p>{{ step.desc|linebreaksbr }}</p>
+              {% endif %}
+            </div>
+          </li>
+        {% endfor %}
+      </ol>
+    {% else %}
+      <p>لم تتم إضافة برنامج السير بعد لهذه الرحلة.</p>
+    {% endif %}
+
+    <h2>المصاريف والاستثناءات</h2>
+    <div class="trip-desc">
+      <h3>يشمل السعر</h3>
+      <ul class="list-checks">
+        {% if trip.includes %}
+          {% for inc in trip.includes %}
+            <li>{{ inc }}</li>
+          {% endfor %}
+        {% else %}
+          <li>لم تُضف بيانات بعد</li>
+        {% endif %}
+      </ul>
+      <h3 style="margin-top:20px;">لا يشمل السعر</h3>
+      <ul class="list-checks no">
+        {% if trip.excludes %}
+          {% for exc in trip.excludes %}
+            <li>{{ exc }}</li>
+          {% endfor %}
+        {% else %}
+          <li>لا توجد استثناءات</li>
+        {% endif %}
+      </ul>
+    </div>
+
+    <div class="trip-desc" style="margin-top:24px;">
+      <h2 style="margin:0;">معلومات التواصل مع {{ site.company }}</h2>
+      <ul class="list-checks" style="margin-top:14px;">
+        {% if site.phone %}<li><a href="{{ phone_tel_href }}">📞 هاتف: {{ site.phone }}</a></li>{% endif %}
+        {% if site.whatsapp %}<li><a href="{{ whatsapp_href }}" target="_blank" rel="noopener">💬 واتساب: {{ site.whatsapp }}</a></li>{% endif %}
+      </ul>
+    </div>
+  </div>
+
+  <aside class="trip-aside reveal-right">
+    <div class="summary-box">
+      <h3>خلاصة الرحلة</h3>
+      <ul class="summary-list">
+        <li><span>النوع</span><strong>{{ trip.get_trip_type_display }}</strong></li>
+        {% if trip.departure %}<li><span>تاريخ الخروج</span><strong>{{ trip.departure|date:"Y-m-d" }}</strong></li>{% endif %}
+        {% if trip.return_date %}<li><span>تاريخ العودة</span><strong>{{ trip.return_date|date:"Y-m-d" }}</strong></li>{% endif %}
+        {% if trip.duration %}<li><span>المدة</span><strong>{{ trip.duration }}</strong></li>{% endif %}
+        {% if trip.transport %}<li><span>النقل</span><strong>{{ trip.transport }}</strong></li>{% endif %}
+        {% if trip.capacity is not None %}<li><span>السعة</span><strong>{{ trip.capacity }} شخص</strong></li>{% endif %}
+      </ul>
+      <div class="price-box">
+        <span class="price">{{ trip.price_display }}</span>
+        {% if trip.remaining is not None %}
+          <p style="margin-top:6px;" class="availability {% if trip.remaining > 0 %}ok{% else %}full{% endif %}">
+            {% if trip.remaining > 0 %}✓ الأماكن المتبقية: {{ trip.remaining }}{% else %}✕ مكتملة العدد — تواصل معنا للتسجيل في قائمة الانتظار{% endif %}
+          </p>
+        {% endif %}
+      </div>
+      <a class="btn" style="width:100%;text-align:center;margin-top:18px;" href="{% url 'core:booking' %}">احجز هذه الرحلة</a>
+      {% if wa_trip_href %}
+        <a class="btn btn-outline" style="width:100%;text-align:center;margin-top:10px;" href="{{ wa_trip_href }}" target="_blank" rel="noopener">💬 احجز عبر واتساب</a>
+      {% endif %}
+    </div>
+  </aside>
+</div>
+{% endblock %}

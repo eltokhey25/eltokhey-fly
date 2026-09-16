@@ -1,0 +1,180 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ title }}</h1>
+    <p>{% if trip %}تعديل «{{ trip.name }}».{% else %}أدخل بيانات الرحلة الجديدة.{% endif %}</p>
+  </div>
+  {% if trip %}
+    <a class="btn btn-ghost" href="{% url 'core:trip_detail' trip.slug %}" target="_blank">عرض الرحلة على الموقع ↗</a>
+  {% endif %}
+</div>
+
+<form method="post" novalidate>
+  {% csrf_token %}
+  {% if form.errors %}
+    <div class="form-errors">يرجى مراجعة الحقول المحددة بالأسفل وتصحيح الأخطاء قبل الحفظ.</div>
+  {% endif %}
+
+  <section class="panel">
+    <div class="panel-head"><h3>البيانات الأساسية</h3></div>
+    <div class="panel-body">
+      <div class="form-grid">
+        <div class="form-group full">
+          {{ form.name.label_tag }}
+          {{ form.name }}
+          {% if form.name.errors %}<span class="field-error">{{ form.name.errors.0 }}</span>{% endif %}
+        </div>
+        <div class="form-group">
+          {{ form.slug.label_tag }}
+          {{ form.slug }}
+          {% if form.slug.errors %}<span class="field-error">{{ form.slug.errors.0 }}</span>{% endif %}
+        </div>
+        <div class="form-group">
+          {{ form.trip_type.label_tag }}
+          {{ form.trip_type }}
+          {% if form.trip_type.errors %}<span class="field-error">{{ form.trip_type.errors.0 }}</span>{% endif %}
+        </div>
+        <div class="form-group">
+          {{ form.price.label_tag }}
+          {{ form.price }}
+          {% if form.price.help_text %}<span class="help">{{ form.price.help_text }}</span>{% endif %}
+          {% if form.price.errors %}<span class="field-error">{{ form.price.errors.0 }}</span>{% endif %}
+        </div>
+        <div class="form-group">
+          {{ form.duration.label_tag }}
+          {{ form.duration }}
+          {% if form.duration.errors %}<span class="field-error">{{ form.duration.errors.0 }}</span>{% endif %}
+        </div>
+        <div class="form-group">
+          {{ form.departure.label_tag }}
+          {{ form.departure }}
+          {% if form.departure.errors %}<span class="field-error">{{ form.departure.errors.0 }}</span>{% endif %}
+        </div>
+        <div class="form-group">
+          {{ form.return_date.label_tag }}
+          {{ form.return_date }}
+          {% if form.return_date.errors %}<span class="field-error">{{ form.return_date.errors.0 }}</span>{% endif %}
+        </div>
+        <div class="form-group">
+          {{ form.transport.label_tag }}
+          {{ form.transport }}
+          {% if form.transport.errors %}<span class="field-error">{{ form.transport.errors.0 }}</span>{% endif %}
+        </div>
+        <div class="form-group">
+          {{ form.capacity.label_tag }}
+          {{ form.capacity }}
+          {% if form.capacity.errors %}<span class="field-error">{{ form.capacity.errors.0 }}</span>{% endif %}
+        </div>
+        <div class="form-group">
+          {{ form.remaining.label_tag }}
+          {{ form.remaining }}
+          {% if form.remaining.errors %}<span class="field-error">{{ form.remaining.errors.0 }}</span>{% endif %}
+        </div>
+        <div class="form-group full">
+          <div class="check-field">
+            {{ form.is_active }}
+            <label class="switch-label" for="{{ form.is_active.id_for_label }}">{{ form.is_active.label }}</label>
+          </div>
+          {% if form.is_active.errors %}<span class="field-error">{{ form.is_active.errors.0 }}</span>{% endif %}
+        </div>
+        <div class="form-group full">
+          {{ form.description.label_tag }}
+          {{ form.description }}
+          {% if form.description.errors %}<span class="field-error">{{ form.description.errors.0 }}</span>{% endif %}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><h3>صورة الرحلة (الصورة المصغرة)</h3></div>
+    <div class="panel-body">
+      <div class="trip-image-field">
+        <div class="trip-image-preview" id="thumb-preview">
+          {% if trip.thumbnail %}
+            <img src="{{ trip.thumbnail.url }}" alt="{{ trip.name }}">
+          {% else %}
+            <span class="thumb-placeholder">🕌</span>
+            <span class="thumb-caption">لا توجد صورة — سيظهر رمز الكعبة الافتراضي على بطاقة الرحلة.</span>
+          {% endif %}
+        </div>
+        <div class="trip-image-controls">
+          <label class="btn btn-outline btn-sm" for="{{ form.thumbnail.id_for_label }}">📁 اختيار صورة</label>
+          {{ form.thumbnail }}
+          {% if trip.thumbnail %}
+            <div class="check-field">
+              {{ form.remove_thumbnail }}
+              <label class="switch-label" for="{{ form.remove_thumbnail.id_for_label }}">{{ form.remove_thumbnail.label }}</label>
+            </div>
+          {% endif %}
+          {% if form.thumbnail.errors %}<span class="field-error">{{ form.thumbnail.errors.0 }}</span>{% endif %}
+          <p class="help">تُعرض الصورة على بطاقة الرحلة في الصفحة الرئيسية وقائمة الرحلات. الحجم الموصى به: أفقي بمقاس 4:3.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h3>برنامج السير بالتفصيل</h3>
+      <button type="button" class="btn btn-outline btn-sm" id="itin-add">+ إضافة خطوة</button>
+    </div>
+    <div class="panel-body">
+      {{ form.itinerary_json }}
+      <div class="itinerary-editor" id="itinerary-wrap"></div>
+      <p class="help" style="margin-top:10px;">يظهر البرنامج في صفحة الرحلة بالتسلسل الزمني. الخطوات الفارغة تُتجاهل تلقائياً.</p>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><h3>المصاريف والاستثناءات</h3></div>
+    <div class="panel-body">
+      <div class="form-grid">
+        <div class="form-group">
+          {{ form.includes_list.label_tag }}
+          {{ form.includes_list }}
+          {% if form.includes_list.errors %}<span class="field-error">{{ form.includes_list.errors.0 }}</span>{% endif %}
+        </div>
+        <div class="form-group">
+          {{ form.excludes_list.label_tag }}
+          {{ form.excludes_list }}
+          {% if form.excludes_list.errors %}<span class="field-error">{{ form.excludes_list.errors.0 }}</span>{% endif %}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="form-actions">
+    <button class="btn" type="submit">💾 حفظ ونشر</button>
+    <a class="btn btn-ghost" href="{% url 'dashboard:trips' %}">إلغاء</a>
+  </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'dashboard/js/trip-editor.js' %}"></script>
+<script>
+(function () {
+  var input = document.getElementById('{{ form.thumbnail.id_for_label }}');
+  var preview = document.getElementById('thumb-preview');
+  var removeChk = document.getElementById('{{ form.remove_thumbnail.id_for_label }}');
+  if (!input || !preview) return;
+  input.addEventListener('change', function () {
+    var file = input.files && input.files[0];
+    if (!file) return;
+    if (removeChk) removeChk.checked = false;
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      preview.innerHTML = '<img src="' + e.target.result + '" alt="معاينة الصورة">';
+    };
+    reader.readAsDataURL(file);
+  });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,84 @@
+{% extends 'dashboard/base.html' %}
+{% load humanize %}
+
+{% block title %}الرحلات{% endblock %}
+{% block page_title %}إدارة الرحلات{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>إدارة الرحلات</h1>
+    <p>أضف وعدّل وأخفِ رحلاتك من الموقع مباشرة.</p>
+  </div>
+  <a class="btn" href="{% url 'dashboard:trip_add' %}">+ إضافة رحلة</a>
+</div>
+
+<div class="panel">
+  <div class="panel-head">
+    <form method="get" style="display:flex;gap:8px;flex-wrap:wrap;">
+      <input class="input" type="search" name="q" placeholder="بحث بالاسم…" value="{{ q }}">
+      <select class="input" name="type" onchange="this.form.submit()">
+        {% for val, label in trip_types %}
+          <option value="{{ val }}" {% if filter_type == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <select class="input" name="stock" onchange="this.form.submit()">
+        <option value="">كل الحالات</option>
+        <option value="available" {% if filter_stock == 'available' %}selected{% endif %}>معروضة</option>
+        <option value="hidden" {% if filter_stock == 'hidden' %}selected{% endif %}>مخفية</option>
+        <option value="full" {% if filter_stock == 'full' %}selected{% endif %}>مكتملة</option>
+      </select>
+      <button class="btn btn-ghost btn-sm" type="submit">بحث</button>
+    </form>
+  </div>
+
+  <div class="panel-body-flush table-wrap">
+    {% if trips %}
+      <table class="table">
+        <thead>
+          <tr>
+            <th>الرحلة</th><th>النوع</th><th>الخروج</th><th>السعر</th><th>متبقي / سعة</th><th>الحالة</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for trip in trips %}
+            <tr>
+              <td>
+                <strong>{{ trip.name }}</strong><br>
+                <span class="muted ltr">/trips/{{ trip.slug }}/</span>
+              </td>
+              <td>
+                <span class="badge badge-{% if trip.trip_type == 'hajj' %}gold{% elif trip.trip_type == 'ramadan' %}teal{% else %}blue{% endif %}">{{ trip.get_trip_type_display }}</span>
+              </td>
+              <td>{% if trip.departure %}{{ trip.departure|date:"Y-m-d" }}{% else %}—{% endif %}</td>
+              <td>{{ trip.price_display }}</td>
+              <td>{{ trip.remaining|default:'—' }} / {{ trip.capacity|default:'—' }}</td>
+              <td>
+                {% if not trip.is_active %}
+                  <span class="badge badge-gray">مخفية</span>
+                {% elif trip.remaining == 0 %}
+                  <span class="badge badge-red">مكتملة</span>
+                {% else %}
+                  <span class="badge badge-green">نشطة</span>
+                {% endif %}
+              </td>
+              <td>
+                <div class="row-actions">
+                  <a class="btn btn-outline btn-sm" href="{% url 'dashboard:trip_edit' trip.slug %}">تعديل</a>
+                  <a class="btn btn-ghost btn-sm" href="{% url 'core:trip_detail' trip.slug %}" target="_blank">عرض</a>
+                  <form method="post" action="{% url 'dashboard:trip_delete' trip.slug %}" data-confirm="هل أنت متأكد من حذف الرحلة «{{ trip.name }}»؟">
+                    {% csrf_token %}
+                    <button class="btn btn-danger-ghost btn-sm" type="submit">حذف</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <div class="empty"><span class="empty-ico">🗂</span><p>لا توجد رحلات مطابقة لبحثك.</p></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

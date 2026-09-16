@@ -1,0 +1,129 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}إعدادات الموقع{% endblock %}
+{% block page_title %}إعدادات الموقع{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>إعدادات الموقع</h1>
+    <p>كل نص يظهر للزوار على الصفحة الرئيسية وصفحات الموقع يُعدَّل من هنا.</p>
+  </div>
+  <a class="btn btn-ghost" href="{% url 'dashboard:preview' %}" target="_blank">👁 معاينة الموقع</a>
+</div>
+
+<form method="post" novalidate>
+  {% csrf_token %}
+  {% if form.errors %}
+    <div class="form-errors">يرجى تصحيح الأخطاء بالأسفل قبل الحفظ.</div>
+  {% endif %}
+
+  <section class="panel">
+    <div class="panel-head"><h3>بيانات التواصل</h3></div>
+    <div class="panel-body">
+      <div class="form-grid">
+        <div class="form-group">
+          {{ form.company.label_tag }}
+          {{ form.company }}
+          {% if form.company.errors %}<span class="field-error">{{ form.company.errors.0 }}</span>{% endif %}
+        </div>
+        <div class="form-group">
+          {{ form.phone.label_tag }}
+          {{ form.phone }}
+          {% if form.phone.errors %}<span class="field-error">{{ form.phone.errors.0 }}</span>{% endif %}
+        </div>
+        <div class="form-group">
+          {{ form.whatsapp.label_tag }}
+          {{ form.whatsapp }}
+          {% if form.whatsapp.help_text %}<span class="help">{{ form.whatsapp.help_text }}</span>{% endif %}
+          {% if form.whatsapp.errors %}<span class="field-error">{{ form.whatsapp.errors.0 }}</span>{% endif %}
+        </div>
+        <div class="form-group">
+          {{ form.email.label_tag }}
+          {{ form.email }}
+          {% if form.email.errors %}<span class="field-error">{{ form.email.errors.0 }}</span>{% endif %}
+        </div>
+        <div class="form-group">
+          {{ form.address.label_tag }}
+          {{ form.address }}
+          {% if form.address.errors %}<span class="field-error">{{ form.address.errors.0 }}</span>{% endif %}
+        </div>
+        <div class="form-group">
+          {{ form.facebook.label_tag }}
+          {{ form.facebook }}
+          {% if form.facebook.errors %}<span class="field-error">{{ form.facebook.errors.0 }}</span>{% endif %}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><h3>الغلاف الرئيسي</h3></div>
+    <div class="panel-body">
+      <div class="form-grid">
+        <div class="form-group">
+          {{ form.hero_title.label_tag }}
+          {{ form.hero_title }}
+          {% if form.hero_title.errors %}<span class="field-error">{{ form.hero_title.errors.0 }}</span>{% endif %}
+        </div>
+        <div class="form-group">
+          {{ form.hero_btn.label_tag }}
+          {{ form.hero_btn }}
+          {% if form.hero_btn.errors %}<span class="field-error">{{ form.hero_btn.errors.0 }}</span>{% endif %}
+        </div>
+        <div class="form-group full">
+          {{ form.hero_sub.label_tag }}
+          {{ form.hero_sub }}
+          {% if form.hero_sub.errors %}<span class="field-error">{{ form.hero_sub.errors.0 }}</span>{% endif %}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><h3>قسم الرحلات</h3></div>
+    <div class="panel-body">
+      <div class="form-grid">
+        <div class="form-group">
+          {{ form.trips_title.label_tag }}
+          {{ form.trips_title }}
+          {% if form.trips_title.errors %}<span class="field-error">{{ form.trips_title.errors.0 }}</span>{% endif %}
+        </div>
+        <div class="form-group">
+          {{ form.why_title.label_tag }}
+          {{ form.why_title }}
+          {% if form.why_title.errors %}<span class="field-error">{{ form.why_title.errors.0 }}</span>{% endif %}
+        </div>
+        <div class="form-group full">
+          {{ form.trips_sub.label_tag }}
+          {{ form.trips_sub }}
+          {% if form.trips_sub.errors %}<span class="field-error">{{ form.trips_sub.errors.0 }}</span>{% endif %}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><h3>قسم الدعوة للحجز</h3></div>
+    <div class="panel-body">
+      <div class="form-grid">
+        <div class="form-group">
+          {{ form.cta_title.label_tag }}
+          {{ form.cta_title }}
+          {% if form.cta_title.errors %}<span class="field-error">{{ form.cta_title.errors.0 }}</span>{% endif %}
+        </div>
+        <div class="form-group full">
+          {{ form.cta_sub.label_tag }}
+          {{ form.cta_sub }}
+          {% if form.cta_sub.errors %}<span class="field-error">{{ form.cta_sub.errors.0 }}</span>{% endif %}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="form-actions">
+    <button class="btn" type="submit">💾 حفظ جميع الإعدادات</button>
+    <a class="btn btn-ghost" href="{% url 'dashboard:sections' %}">ترتيب الأقسام ←</a>
+  </div>
+</form>
+{% endblock %}

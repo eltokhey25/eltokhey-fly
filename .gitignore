@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Virtualenv
+venv/
+.env
+
+# Old PHP project backed up locally (kept out of the repo)
+_old-php-backup/
+
+# Django
+db.sqlite3
+media/
+staticfiles/
+collectedstatic/
+
+# Logs
+*.log
+
+# OS / editors
+.DS_Store

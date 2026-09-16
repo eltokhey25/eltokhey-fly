@@ -1,0 +1,63 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}المستخدمون{% endblock %}
+{% block page_title %}إدارة المستخدمين{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>إدارة المستخدمين</h1>
+    <p>من يمكنهم دخول لوحة التحكم والصلاحيات المتاحة لكل مستخدم.</p>
+  </div>
+  <a class="btn" href="{% url 'dashboard:user_add' %}">+ إضافة مستخدم</a>
+</div>
+
+<div class="panel">
+  <div class="panel-body-flush table-wrap">
+    {% if users %}
+      <table class="table">
+        <thead>
+          <tr><th>المستخدم</th><th>الصلاحيات</th><th>نشط</th><th>آخر دخول</th><th></th></tr>
+        </thead>
+        <tbody>
+          {% for user in users %}
+            <tr>
+              <td>
+                <strong>{{ user.username }}</strong>
+                {% if user == request.user %}<span class="badge badge-teal" style="margin-inline-start:6px;">أنت</span>{% endif %}
+                {% if user.get_full_name %}<br><span class="muted">{{ user.get_full_name }}</span>{% endif %}
+              </td>
+              <td>
+                {% if user.is_superuser %}
+                  <span class="badge badge-gold">مسؤول</span>
+                {% elif user.is_staff %}
+                  <span class="badge badge-blue">مشرف</span>
+                {% else %}
+                  <span class="badge badge-gray">عضو عادي</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if user.is_active %}<span class="badge badge-green">نشط</span>{% else %}<span class="badge badge-red">معطّل</span>{% endif %}
+              </td>
+              <td><span class="muted">{{ user.last_login|date:"Y-m-d H:i"|default:'لم يسجل بعد' }}</span></td>
+              <td>
+                <div class="row-actions">
+                  <a class="btn btn-outline btn-sm" href="{% url 'dashboard:user_edit' user.pk %}">تعديل</a>
+                  {% if user != request.user %}
+                    <form method="post" action="{% url 'dashboard:user_delete' user.pk %}" data-confirm="حذف المستخدم «{{ user.username }}» نهائياً؟">
+                      {% csrf_token %}
+                      <button class="btn btn-danger-ghost btn-sm" type="submit">حذف</button>
+                    </form>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <div class="empty"><span class="empty-ico">👥</span><p>لا يوجد مستخدمون.</p></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

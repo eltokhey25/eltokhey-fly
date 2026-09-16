@@ -1,0 +1,43 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}ترتيب الأقسام{% endblock %}
+{% block page_title %}ترتيب أقسام الصفحة الرئيسية{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>ترتيب الأقسام</h1>
+    <p>اسحب الأقسام لترتيب ظهورها على الصفحة الرئيسية ثم احفظ التغيير.</p>
+  </div>
+  <a class="btn btn-ghost" href="{% url 'dashboard:preview' %}?url=/" target="_blank">👁 معاينة الصفحة الرئيسية</a>
+</div>
+
+<form method="post">
+  {% csrf_token %}
+  <div class="panel">
+    <div class="panel-head"><h3>أقسام الصفحة الرئيسية</h3></div>
+    <div class="panel-body">
+      <ul class="reorder-list" id="section-list">
+        {% for section in sections %}
+          <li class="reorder-item" draggable="true">
+            <span class="reorder-handle">☰</span>
+            <span class="reorder-num">{{ forloop.counter }}</span>
+            <strong>{{ section.label }}</strong>
+            <input type="hidden" name="order" value="{{ section.slug }}">
+          </li>
+        {% endfor %}
+      </ul>
+      <p class="help" style="margin-top:12px;">القسم الأول يظهر أعلى الصفحة. كل أقسام الموقع الأربعة موجودة دائماً ولا يمكن حذف أي منها.</p>
+    </div>
+  </div>
+
+  <div class="form-actions">
+    <button class="btn" type="submit">💾 حفظ الترتيب</button>
+  </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'dashboard/js/sections.js' %}"></script>
+{% endblock %}

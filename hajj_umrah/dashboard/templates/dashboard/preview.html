@@ -1,0 +1,87 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}المعاينة الحية{% endblock %}
+{% block page_title %}المعاينة الحية{% endblock %}
+
+{% block extra_css %}
+<style>
+  .preview-wrap { display: grid; grid-template-columns: 1fr 400px; gap: 18px; align-items: start; }
+  .preview-main { min-width: 0; }
+  .editor-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    position: sticky;
+    top: 84px;
+  }
+  .editor-head {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 16px; border-bottom: 1px solid var(--border);
+  }
+  .editor-head strong { font-size: 0.92rem; }
+  #editor-frame { width: 100%; height: calc(100vh - 210px); min-height: 420px; border: 0; background: #fff; display: block; }
+  .toasts { position: fixed; bottom: 22px; inset-inline-start: 22px; z-index: 80; display: flex; flex-direction: column; gap: 8px; }
+  .toast {
+    background: #0d2138; color: #fff; padding: 10px 18px; border-radius: 50px;
+    font-size: 0.86rem; font-weight: 700; box-shadow: 0 10px 30px rgba(5,15,30,.4);
+    animation: toast-in .25s ease;
+  }
+  .toast.out { opacity: 0; transition: opacity .4s ease; }
+  @keyframes toast-in { from { transform: translateY(10px); opacity: 0; } }
+  @media (max-width: 1100px) { .preview-wrap { grid-template-columns: 1fr; } .editor-panel { position: static; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="preview-wrap">
+  <div class="preview-main">
+    <div class="preview-toolbar">
+      <select class="input" id="preview-url">
+        {% for url, label in preview_pages %}
+          <option value="{{ url }}" {% if selected_url == url %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <button class="icon-btn" id="preview-reload" title="تحديث">⟳</button>
+      <a class="icon-btn" id="preview-tab" href="#" title="فتح في تبويب جديد">⤢</a>
+    </div>
+
+    <div class="preview-toolbar" style="margin-top:10px;">
+      <span class="muted" style="font-size:0.8rem;">حجم العرض:</span>
+      <button class="device-btn active" data-device="desktop">🖥 كمبيوتر</button>
+      <button class="device-btn" data-device="tablet">📱 تابلت</button>
+      <button class="device-btn" data-device="mobile">📱 موبايل</button>
+      <span style="flex:1"></span>
+      <div class="check-field" style="padding:0;">
+        <input type="checkbox" class="switch-input" id="preview-edit">
+        <label class="switch-label" for="preview-edit">✎ وضع التحرير المباشر</label>
+      </div>
+    </div>
+
+    <div class="preview-edit-note" style="margin-bottom:12px;">
+      💡 فعّل «وضع التحرير المباشر» ثم مرّر على أي عنصر في الصفحة واضغط ✎ لتعديله فوراً من اللوحة الجانبية.
+    </div>
+
+    <div class="preview-frame-box" id="preview-frame-box">
+      <iframe id="preview-frame" title="معاينة الموقع" sandbox="allow-same-origin allow-scripts allow-forms allow-popups" referrerpolicy="no-referrer-when-downgrade"></iframe>
+    </div>
+  </div>
+
+  <aside class="editor-panel" id="editor-panel" hidden>
+    <div class="editor-head">
+      <strong>✎ محرر التعديل</strong>
+      <span class="muted" style="font-size:0.78rem;">الحفظ يحدّث الموقع فوراً</span>
+      <button class="icon-btn" id="editor-close" style="margin-inline-start:auto;" title="إغلاق المحرر">✕</button>
+    </div>
+    <iframe id="editor-frame" title="محرر التعديل"></iframe>
+  </aside>
+</div>
+
+<div class="toasts" id="preview-toasts"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'dashboard/js/preview.js' %}"></script>
+{% endblock %}

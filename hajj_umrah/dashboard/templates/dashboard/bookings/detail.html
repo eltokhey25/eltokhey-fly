@@ -1,0 +1,64 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}طلب حجز — {{ booking.name }}{% endblock %}
+{% block page_title %}تفاصيل طلب الحجز{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ booking.name }}</h1>
+    <p>تم استلام الطلب في {{ booking.created_at|date:"Y-m-d H:i" }}</p>
+  </div>
+  <div class="topbar-actions">
+    <a class="btn btn-outline" href="{% url 'dashboard:bookings' %}">→ كل الطلبات</a>
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="panel">
+    <div class="panel-head"><h3>بيانات الطلب</h3></div>
+    <div class="panel-body">
+      <ul class="summary-list" style="list-style:none;display:flex;flex-direction:column;gap:10px;">
+        <li style="display:flex;justify-content:space-between;border-bottom:1px solid var(--border);padding:8px 0;">
+          <span class="muted">الاسم</span><strong>{{ booking.name }}</strong>
+        </li>
+        <li style="display:flex;justify-content:space-between;border-bottom:1px solid var(--border);padding:8px 0;">
+          <span class="muted">الهاتف</span><strong class="ltr">{{ booking.phone }}</strong>
+        </li>
+        <li style="display:flex;justify-content:space-between;border-bottom:1px solid var(--border);padding:8px 0;">
+          <span class="muted">الرحلة / الموعد</span><strong>{{ booking.trip_label|default:'غير محدد' }}</strong>
+        </li>
+        <li style="display:flex;justify-content:space-between;border-bottom:1px solid var(--border);padding:8px 0;">
+          <span class="muted">نوع الرحلة</span>
+          <strong>{% if booking.trip_type %}<span class="badge badge-blue">{{ booking.trip_type }}</span>{% else %}<span class="badge badge-gray">عام</span>{% endif %}</strong>
+        </li>
+        <li style="display:flex;justify-content:space-between;border-bottom:1px solid var(--border);padding:8px 0;">
+          <span class="muted">عدد الأفراد</span><strong>{{ booking.people }}</strong>
+        </li>
+        <li style="display:flex;justify-content:space-between;padding:8px 0;">
+          <span class="muted">تاريخ الطلب</span><strong>{{ booking.created_at|date:"Y-m-d H:i" }}</strong>
+        </li>
+      </ul>
+
+      <div style="display:flex;gap:8px;margin-top:18px;flex-wrap:wrap;">
+        <a class="btn" href="tel:{{ booking.phone }}">📞 الاتصال</a>
+        <form method="post" action="{% url 'dashboard:booking_delete' booking.pk %}" data-confirm="حذف طلب الحجز هذا نهائياً؟">
+          {% csrf_token %}
+          <button class="btn btn-danger" type="submit">🗑 حذف الطلب</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><h3>ملاحظات العميل</h3></div>
+    <div class="panel-body">
+      {% if booking.notes %}
+        <p style="background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;white-space:pre-wrap;">{{ booking.notes }}</p>
+      {% else %}
+        <div class="empty"><span class="empty-ico">📝</span><p>لا توجد ملاحظات على هذا الطلب.</p></div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

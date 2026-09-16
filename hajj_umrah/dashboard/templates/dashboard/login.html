@@ -1,0 +1,45 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>دخول المشرف — لوحة التحكم</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'dashboard/css/dashboard.css' %}">
+</head>
+<body>
+<div class="login-page">
+  <div class="login-card">
+    <div class="login-head">
+      <div class="login-mark">🕋</div>
+      <h1>لوحة تحكم الموقع</h1>
+      <p>سجّل دخولك لإدارة رحلات الحج والعمرة</p>
+    </div>
+
+    {% if form.errors %}
+      <div class="form-errors" style="margin-bottom:16px;">
+        اسم المستخدم أو كلمة المرور غير صحيحة. حاول مرة أخرى.
+      </div>
+    {% endif %}
+
+    <form method="post" novalidate>
+      {% csrf_token %}
+      <div class="form-group">
+        <label for="{{ form.username.id_for_label }}">اسم المستخدم</label>
+        {{ form.username }}
+      </div>
+      <div class="form-group">
+        <label for="{{ form.password.id_for_label }}">كلمة المرور</label>
+        {{ form.password }}
+      </div>
+      {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+      <button type="submit" class="btn login-submit">دخول لوحة التحكم →</button>
+    </form>
+
+    <div class="login-foot"><a href="{% url 'core:home' %}">العودة إلى الموقع الرئيسي</a></div>
+  </div>
+</div>
+</body>
+</html>

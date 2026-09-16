@@ -1,0 +1,28 @@
+{% load humanize %}
+<article class="trip-card reveal" data-type="{{ trip.trip_type }}">
+  <div class="trip-card-media">
+    {% if trip.thumbnail %}
+      <img src="{{ trip.thumbnail.url }}" alt="{{ trip.name }} — صورة الرحلة">
+    {% else %}
+      <div class="noimg">🕌</div>
+    {% endif %}
+    <span class="trip-type-badge">{{ trip.get_trip_type_display }}</span>
+    {% if trip.price %}
+      <span class="trip-price-badge">{{ trip.price_display }}</span>
+    {% endif %}
+  </div>
+  <div class="trip-card-body">
+    <h3><a href="{% url 'core:trip_detail' trip.slug %}">{{ trip.name }}</a></h3>
+    <div class="trip-meta">
+      {% if trip.departure %}<span>📅 {{ trip.departure|date:"Y-m-d" }}</span>{% endif %}
+      {% if trip.duration %}<span>⏱ {{ trip.duration }}</span>{% endif %}
+      {% if trip.transport %}<span>🚌 {{ trip.transport }}</span>{% endif %}
+    </div>
+    {% if trip.remaining is not None %}
+      <span class="availability {% if trip.remaining > 0 %}ok{% else %}full{% endif %}">
+        {% if trip.remaining > 0 %}✓ الأماكن المتبقية: {{ trip.remaining }}{% else %}✕ مكتملة العدد{% endif %}
+      </span>
+    {% endif %}
+    <a class="btn" href="{% url 'core:trip_detail' trip.slug %}">عرض تفاصيل الرحلة</a>
+  </div>
+</article>

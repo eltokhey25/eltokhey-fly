@@ -1,0 +1,110 @@
+{% extends 'dashboard/base.html' %}
+{% load humanize %}
+
+{% block title %}نظرة عامة{% endblock %}
+{% block page_title %}نظرة عامة{% endblock %}
+
+{% block content %}
+<section class="cards-grid">
+  <div class="stat-card">
+    <span class="stat-ico">🚌</span>
+    <div><div class="stat-num">{{ active_count }}</div><div class="stat-label">رحلات نشطة</div></div>
+  </div>
+  <div class="stat-card teal">
+    <span class="stat-ico teal">🗓</span>
+    <div><div class="stat-num">{{ upcoming_count }}</div><div class="stat-label">رحلات قادمة</div></div>
+  </div>
+  <div class="stat-card accent">
+    <span class="stat-ico gold">📩</span>
+    <div><div class="stat-num">{{ bookings_total }}</div><div class="stat-label">إجمالي الطلبات</div></div>
+  </div>
+  <div class="stat-card accent">
+    <span class="stat-ico gold">🆕</span>
+    <div><div class="stat-num">{{ bookings_30 }}</div><div class="stat-label">طلبات آخر ٣٠ يوم</div></div>
+  </div>
+  <div class="stat-card danger">
+    <span class="stat-ico danger">🪑</span>
+    <div><div class="stat-num">{{ remaining_sum }}</div><div class="stat-label">أماكن متبقية</div></div>
+  </div>
+  <div class="stat-card">
+    <span class="stat-ico">🖼</span>
+    <div><div class="stat-num">{{ media_count }}</div><div class="stat-label">ملفات الوسائط</div></div>
+  </div>
+</section>
+
+<section class="grid-2">
+  <div class="panel">
+    <div class="panel-head">
+      <h3>أسعار الرحلات القادمة</h3>
+      <a class="btn btn-outline btn-sm" href="{% url 'dashboard:trips' %}">كل الرحلات</a>
+    </div>
+    <div class="panel-body">
+      {% if chart_data %}
+        <div class="chart">
+          {% for row in chart_data %}
+            <div class="chart-row">
+              <span class="bar-name" title="{{ row.name }}">{{ row.name|truncatechars:20 }}</span>
+              <div class="bar-track">
+                {% if row.pct is not None %}
+                  <div class="bar-fill" style="width: {{ row.pct }}%;"></div>
+                {% endif %}
+              </div>
+              <span class="bar-val">{{ row.value|default:'—' }}</span>
+            </div>
+          {% endfor %}
+        </div>
+        <div class="chart-legend">
+          <span class="legend-item"><span class="legend-dot" style="background:var(--primary)"></span> السعر بالجنيه المصري</span>
+        </div>
+      {% else %}
+        <div class="empty"><span class="empty-ico">🚌</span><p>لا توجد رحلات قادمة بعد.</p></div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <h3>أحدث طلبات الحجز</h3>
+      <a class="btn btn-outline btn-sm" href="{% url 'dashboard:bookings' %}">كل الطلبات</a>
+    </div>
+    <div class="panel-body-flush table-wrap">
+      {% if latest_bookings %}
+        <table class="table">
+          <thead><tr><th>الاسم</th><th>الرحلة</th><th>الهاتف</th><th>التاريخ</th></tr></thead>
+          <tbody>
+            {% for booking in latest_bookings %}
+              <tr>
+                <td><a href="{% url 'dashboard:booking_detail' booking.pk %}"><strong>{{ booking.name }}</strong></a></td>
+                <td>{{ booking.trip_label|truncatechars:28 }}</td>
+                <td><span class="muted ltr">{{ booking.phone }}</span></td>
+                <td><span class="muted">{{ booking.created_at|date:"Y-m-d" }}</span></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <div class="empty"><span class="empty-ico">📭</span><p>لا توجد طلبات حجز بعد.</p></div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel-head"><h3>توزيع أنواع الرحلات</h3></div>
+  <div class="panel-body" style="display:flex;gap:18px;flex-wrap:wrap;">
+    <span class="badge badge-gold">الحج: {{ trip_types.hajj }}</span>
+    <span class="badge badge-blue">العمرة: {{ trip_types.umrah }}</span>
+    <span class="badge badge-teal">عمرة رمضان: {{ trip_types.ramadan }}</span>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel-head"><h3>إجراءات سريعة</h3></div>
+  <div class="panel-body" style="display:flex;gap:10px;flex-wrap:wrap;">
+    <a class="btn" href="{% url 'dashboard:trip_add' %}">+ إضافة رحلة</a>
+    <a class="btn btn-outline" href="{% url 'dashboard:booking_add' %}">+ إضافة طلب حجز</a>
+    <a class="btn btn-ghost" href="{% url 'dashboard:preview' %}">👁 فتح المعاينة الحية</a>
+    <a class="btn btn-ghost" href="{% url 'dashboard:settings' %}">⚙️ إعدادات الموقع</a>
+  </div>
+</section>
+{% endblock %}

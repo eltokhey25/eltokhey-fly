@@ -1,0 +1,86 @@
+/* Inline editing UI — loaded on public pages ONLY for staff in edit mode */
+body.dash-edit-mode .dash-editable { position: relative; outline: 1.5px dashed transparent; transition: outline-color 0.15s ease, box-shadow 0.15s ease; }
+body.dash-edit-mode .dash-editable:hover { outline-color: #149a97; box-shadow: 0 0 0 3px rgba(20, 154, 151, 0.18); }
+
+.dash-edit-btn {
+  position: absolute;
+  top: 8px;
+  inset-inline-start: 8px;
+  z-index: 9999;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  border: 0;
+  background: linear-gradient(135deg, #43c8c4, #149a97);
+  color: #fff;
+  font-size: 0.9rem;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  box-shadow: 0 5px 14px rgba(20, 154, 151, 0.45);
+  opacity: 0;
+  transform: scale(0.85);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.dash-editable:hover > .dash-edit-btn,
+.dash-edit-btn:hover { opacity: 1; transform: scale(1); }
+
+.dash-admin-bar {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #0d2138;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 50px;
+  padding: 8px 10px;
+  padding-inline: 14px;
+  font-family: "Cairo", Tahoma, sans-serif;
+  font-size: 0.84rem;
+  box-shadow: 0 14px 40px rgba(5, 15, 30, 0.5);
+}
+.dash-admin-bar .bar-badge {
+  background: rgba(20, 154, 151, 0.25);
+  color: #6ee7dd;
+  border-radius: 50px;
+  padding: 3px 12px;
+  font-weight: 800;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+.dash-admin-bar a {
+  color: #dbe6f2;
+  text-decoration: none;
+  padding: 4px 10px;
+  border-radius: 50px;
+  font-weight: 700;
+  transition: 0.15s;
+  white-space: nowrap;
+}
+.dash-admin-bar a:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+.dash-admin-bar .bar-exit {
+  background: var(--danger, #e11d48);
+  color: #fff;
+}
+.dash-edit-tip {
+  position: fixed;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20000;
+  background: #fdf6e3;
+  border: 1px solid #f5d77a;
+  color: #8a6d1d;
+  border-radius: 50px;
+  padding: 6px 18px;
+  font-family: "Cairo", Tahoma, sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  pointer-events: none;
+}

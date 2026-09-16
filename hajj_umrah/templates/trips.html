@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}رحلاتنا — {{ site.company }}{% endblock %}
+
+{% block body_class %}post-type-archive-trip{% endblock %}
+
+{% block extra_js %}
+  <script src="{% static 'js/filter.js' %}" defer></script>
+{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <div class="container reveal">
+    <h1>رحلات الحج والعمرة</h1>
+    <p>جميع رحلات الحج والعمرة مرتبة حسب موعد الانطلاق.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="trip-filters reveal" id="trip-filters">
+      <button class="filter-btn active" data-filter="all">كل الرحلات</button>
+      {% for ttype in trip_types %}
+        <button class="filter-btn" data-filter="{{ ttype.slug }}">{{ ttype.name }}</button>
+      {% endfor %}
+    </div>
+
+    {% if trips %}
+      <div class="trip-grid">
+        {% for trip in trips %}
+          {% include 'includes/trip_card.html' with trip=trip %}
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="text-center">لا توجد رحلات حالياً.</p>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

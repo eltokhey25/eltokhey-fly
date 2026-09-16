@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+
+{% block title %}تواصل وحجز — {{ site.company }}{% endblock %}
+
+{% block body_class %}page-template-template-booking{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <div class="container reveal">
+    <h1>تواصل وحجز</h1>
+    <p>اختر رحلتك، احجز مكانك، وسنتواصل معك لتأكيد البيانات.</p>
+  </div>
+</section>
+
+<main class="page-gap">
+  <div class="container">
+    <div class="contact-grid">
+      <div class="reveal-left">
+        <div class="info-card">
+          <h3>بيانات التواصل</h3>
+          <ul class="list-checks" style="margin-top:10px;">
+            {% if site.phone %}<li><a href="{{ phone_tel_href }}">📞 {{ site.phone }}</a></li>{% endif %}
+            {% if site.whatsapp %}<li><a href="{{ whatsapp_href }}" target="_blank" rel="noopener">💬 واتساب: {{ site.whatsapp }}</a></li>{% endif %}
+            {% if site.email %}<li><a href="mailto:{{ site.email }}">✉️ {{ site.email }}</a></li>{% endif %}
+            {% if site.address %}<li>📍 {{ site.address }}</li>{% endif %}
+          </ul>
+        </div>
+        <div class="info-card">
+          <h3>أوقات العمل</h3>
+          <p>يومياً من 9 صباحاً حتى 10 مساءً</p>
+        </div>
+      </div>
+      <div class="reveal-right">
+        <h2 class="cta-title" style="margin-bottom:18px;">أرسل طلب الحجز</h2>
+        {% if form_msg %}
+          <div class="form-msg {% if form_ok %}ok{% else %}err{% endif %}">{{ form_msg }}</div>
+        {% endif %}
+        <form class="contact-form" method="post">
+          {% csrf_token %}
+          <div class="row2">
+            <div>
+              <label for="hu-name">الاسم الكامل *</label>
+              <input type="text" id="hu-name" name="hu_name" required>
+            </div>
+            <div>
+              <label for="hu-phone">رقم الهاتف *</label>
+              <input type="tel" id="hu-phone" name="hu_phone" required>
+            </div>
+          </div>
+          <div class="row2">
+            <div>
+              <label for="hu-departure">اختر الرحلة / الموعد</label>
+              <select id="hu-departure" name="hu_departure">
+                <option value="">— اختر رحلة —</option>
+                {% for trip in trips %}
+                  <option value="{{ trip.name }}{% if trip.departure %} — {{ trip.departure|date:'Y-m-d' }}{% endif %}">{{ trip.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div>
+              <label for="hu-type">نوع الرحلة</label>
+              <select id="hu-type" name="hu_type">
+                <option value="عمرة">عمرة</option>
+                <option value="عمرة رمضان">عمرة رمضان</option>
+                <option value="حج">حج</option>
+                <option value="غير محدد">غير محدد</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label for="hu-people">عدد الأفراد</label>
+            <input type="number" id="hu-people" name="hu_people" min="1" max="50" value="1">
+          </div>
+          <div>
+            <label for="hu-notes">ملاحظاتك / استفسارك</label>
+            <textarea id="hu-notes" name="hu_notes" rows="4" placeholder="اكتب أي تفاصيل تود إخبارنا بها..."></textarea>
+          </div>
+          <button type="submit" class="btn" name="hu_booking_submit" value="1" style="width:100%;text-align:center;">إرسال طلب الحجز</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</main>
+{% endblock %}

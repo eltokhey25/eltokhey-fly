@@ -1,0 +1,60 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div><h1>{{ title }}</h1><p>أدخل بيانات طلب الحجز الوارد، سواء من الموقع أو هاتفياً.</p></div>
+</div>
+
+<form method="post" novalidate>
+  {% csrf_token %}
+  {% if form.errors %}
+    <div class="form-errors">يرجى تصحيح الأخطاء بالأسفل قبل الحفظ.</div>
+  {% endif %}
+
+  <div class="panel">
+    <div class="panel-head"><h3>بيانات الطلب</h3></div>
+    <div class="panel-body">
+      <div class="form-grid">
+        <div class="form-group">
+          {{ form.name.label_tag }}
+          {{ form.name }}
+          {% if form.name.errors %}<span class="field-error">{{ form.name.errors.0 }}</span>{% endif %}
+        </div>
+        <div class="form-group">
+          {{ form.phone.label_tag }}
+          {{ form.phone }}
+          {% if form.phone.errors %}<span class="field-error">{{ form.phone.errors.0 }}</span>{% endif %}
+        </div>
+        <div class="form-group">
+          {{ form.trip_label.label_tag }}
+          {{ form.trip_label }}
+          {% if form.trip_label.errors %}<span class="field-error">{{ form.trip_label.errors.0 }}</span>{% endif %}
+        </div>
+        <div class="form-group">
+          {{ form.trip_type.label_tag }}
+          {{ form.trip_type }}
+          {% if form.trip_type.errors %}<span class="field-error">{{ form.trip_type.errors.0 }}</span>{% endif %}
+        </div>
+        <div class="form-group">
+          {{ form.people.label_tag }}
+          {{ form.people }}
+          {% if form.people.errors %}<span class="field-error">{{ form.people.errors.0 }}</span>{% endif %}
+        </div>
+        <div class="form-group full">
+          {{ form.notes.label_tag }}
+          {{ form.notes }}
+          {% if form.notes.errors %}<span class="field-error">{{ form.notes.errors.0 }}</span>{% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-actions">
+    <button class="btn" type="submit">💾 حفظ الطلب</button>
+    <a class="btn btn-ghost" href="{% url 'dashboard:bookings' %}">إلغاء</a>
+  </div>
+</form>
+{% endblock %}
