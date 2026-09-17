@@ -413,14 +413,24 @@ ol {
   top: 0;
   z-index: 100;
   background: transparent;
-  transition: background var(--transition), box-shadow var(--transition);
+  transition: box-shadow var(--transition);
 }
 
+/* Glass effect lives on a ::before layer so the header element itself
+   never creates a containing block (filter/backdrop-filter) that would
+   trap the fixed-position mobile drawer. */
 .site-header.scrolled {
-  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.08);
+}
+
+.site-header.scrolled::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: rgba(255, 255, 255, 0.92);
   -webkit-backdrop-filter: blur(14px) saturate(1.2);
   backdrop-filter: blur(14px) saturate(1.2);
-  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.08);
 }
 
 .header-main {
@@ -560,12 +570,14 @@ ol {
   backdrop-filter: blur(2px);
   opacity: 0;
   visibility: hidden;
+  pointer-events: none;
   transition: opacity 300ms ease, visibility 300ms ease;
 }
 
 .nav-backdrop.active {
   opacity: 1;
   visibility: visible;
+  pointer-events: auto;
 }
 
 /* ==========================================================================
@@ -1679,7 +1691,7 @@ body.error404 { --hero-img: url("../img/kaaba.jpg"); }
   font-size: 1.5rem;
   text-decoration: none;
   box-shadow: var(--shadow-lg);
-  transition: transform var(--transition), box-shadow var(--transition);
+  transition: transform var(--transition), box-shadow var(--transition), opacity var(--transition);
 }
 
 .fab:hover {
@@ -1690,6 +1702,14 @@ body.error404 { --hero-img: url("../img/kaaba.jpg"); }
 .fab-call {
   bottom: 82px;
   background: linear-gradient(135deg, var(--primary-600), var(--primary-800));
+}
+
+/* Hide floating buttons while the mobile drawer is open so they never
+   cover the drawer (FABs are root-level z-index 1000). */
+body.menu-open .fab {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(4px);
 }
 
 .fab-wa {
@@ -2019,6 +2039,7 @@ body.error404 { --hero-img: url("../img/kaaba.jpg"); }
     inset-inline-start: -100%;
     width: 84%;
     max-width: 360px;
+    height: 100vh;
     height: 100dvh;
     background: linear-gradient(180deg, var(--navy-900) 0%, var(--navy-700) 100%);
     flex-direction: column;

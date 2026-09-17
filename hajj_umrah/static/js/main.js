@@ -29,6 +29,7 @@
 			if (backdrop) backdrop.classList.toggle('active', open);
 			toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
 			if (close) close.setAttribute('aria-expanded', open ? 'true' : 'false');
+			document.body.classList.toggle('menu-open', open);
 			document.body.style.overflow = open ? 'hidden' : '';
 		};
 
