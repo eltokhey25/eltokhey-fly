@@ -1157,20 +1157,15 @@ body.error404 { --hero-img: url("../img/kaaba.jpg"); }
 
 .timeline-item {
   position: relative;
-  padding: 0 var(--space-16) var(--space-8) 0;
-}
-
-@media (min-width: 992px) {
-  .trip-content .timeline-item {
-    padding-inline-end: var(--space-16);
-  }
+  padding-block-end: var(--space-8);
+  padding-inline-start: var(--space-16);
 }
 
 .timeline-item::before {
   content: "";
   position: absolute;
   top: 24px;
-  inset-inline-end: 20px;
+  inset-inline-start: 20px;
   width: 2px;
   height: calc(100% - 24px);
   background: linear-gradient(var(--primary-200), var(--primary-500));
@@ -1182,7 +1177,7 @@ body.error404 { --hero-img: url("../img/kaaba.jpg"); }
 
 .timeline-dot {
   position: absolute;
-  inset-inline-end: 6px;
+  inset-inline-start: 6px;
   top: 4px;
   width: 30px;
   height: 30px;
