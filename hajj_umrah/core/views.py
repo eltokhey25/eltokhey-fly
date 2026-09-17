@@ -1,15 +1,19 @@
 import logging
 import re
+from datetime import timedelta
 from urllib.parse import quote
 
 from django.conf import settings
 from django.core.mail import send_mail
+from django.core.paginator import Paginator
+from django.contrib import messages
 from django.http import Http404
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.template.response import TemplateResponse
 from django.utils import timezone
 
-from .models import Booking, BookingStatus, SiteSettings, Trip
+from .forms import ReviewForm
+from .models import Booking, BookingStatus, Review, ReviewStatus, SiteSettings, Trip
 from .whatsapp import (
     booking_created_message,
     booking_track_confirmed_message,
@@ -32,10 +36,57 @@ def home(request):
     trips = Trip.objects.filter(is_active=True)
     context = {
         'trips': trips,
+        'latest_reviews': Review.objects.filter(
+            status=ReviewStatus.APPROVED
+        ).order_by('-approved_at', '-created_at')[:3],
         'book_title': 'رحلات السنة',
         'book_sub': 'جميع رحلات الحج والعمرة مرتبة حسب موعد الانطلاق، اضغط على أي رحلة لعرض برنامج السير بالتفصيل من الخروج حتى العودة.',
     }
     return render(request, 'home.html', context)
+
+
+def reviews_list(request):
+    reviews = Review.objects.filter(status=ReviewStatus.APPROVED).order_by('-approved_at', '-created_at')
+    paginator = Paginator(reviews, 12)
+    page = paginator.get_page(request.GET.get('page'))
+    context = {
+        'reviews': page.object_list,
+        'page_obj': page,
+        'paginator': paginator,
+    }
+    return render(request, 'reviews.html', context)
+
+
+def _client_ip(request):
+    forwarded = request.META.get('HTTP_X_FORWARDED_FOR', '')
+    if forwarded:
+        return forwarded.split(',')[0].strip() or request.META.get('REMOTE_ADDR')
+    return request.META.get('REMOTE_ADDR')
+
+
+def review_submit(request):
+    if request.method == 'POST':
+        ip = _client_ip(request)
+        form = ReviewForm(request.POST, request.FILES)
+        if form.is_valid():
+            rate_limited = Review.objects.filter(
+                ip_address=ip,
+                created_at__gte=timezone.now() - timedelta(hours=24),
+            ).exists()
+            if not rate_limited:
+                review = form.save(commit=False)
+                review.status = ReviewStatus.PENDING
+                review.ip_address = ip
+                review.save()
+            messages.success(
+                request,
+                'شكراً لك! تم استلام رأيك وسيتم مراجعته قريباً قبل النشر.',
+            )
+            return redirect('core:reviews')
+    else:
+        form = ReviewForm()
+    context = {'form': form}
+    return render(request, 'review_submit.html', context)
 
 
 def trips_list(request):

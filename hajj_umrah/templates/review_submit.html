@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}اكتب رأيك — {{ site.company }}{% endblock %}
+
+{% block body_class %}review-submit-page{% endblock %}
+
+{% block extra_js %}
+  <script src="{% static 'js/review.js' %}" defer></script>
+{% endblock %}
+
+{% block content %}
+<section class="hero hero-inner">
+  <div class="container reveal">
+    <span class="hero-eyebrow">✍️ شاركنا تجربتك</span>
+    <h1>اكتب رأيك</h1>
+    <p>رأيك يهمنا ويساعد غيرك من ضيوفنا على الاختيار.</p>
+  </div>
+</section>
+
+<section class="section section-alt">
+  <div class="container">
+    <div class="review-form-card">
+      {% if form.non_field_errors %}
+        <div class="form-msg err">{{ form.non_field_errors.0 }}</div>
+      {% endif %}
+
+      <form class="contact-form" method="post" enctype="multipart/form-data" novalidate>
+        {% csrf_token %}
+
+        <div class="row2">
+          <div>
+            <label for="{{ form.name.id_for_label }}">{{ form.name.label }} *</label>
+            {{ form.name }}
+            {% if form.name.errors %}<span class="field-error">{{ form.name.errors.0 }}</span>{% endif %}
+          </div>
+          <div>
+            <label for="{{ form.country.id_for_label }}">{{ form.country.label }} *</label>
+            {{ form.country }}
+            {% if form.country.errors %}<span class="field-error">{{ form.country.errors.0 }}</span>{% endif %}
+          </div>
+        </div>
+
+        <div>
+          <label>{{ form.rating.label }} *</label>
+          <div class="star-input" id="star-input" role="radiogroup" aria-label="اختر تقييمك من 1 إلى 5">
+            {% for i in "12345" %}
+              <button type="button" class="star-btn" data-value="{{ forloop.counter }}"
+                      role="radio" aria-checked="false"
+                      aria-label="تقييم {{ forloop.counter }} من 5">★</button>
+            {% endfor %}
+          </div>
+          {{ form.rating }}
+          {% if form.rating.errors %}<span class="field-error">{{ form.rating.errors.0 }}</span>{% endif %}
+        </div>
+
+        <div>
+          <label for="{{ form.text.id_for_label }}">{{ form.text.label }} *</label>
+          {{ form.text }}
+          {% if form.text.errors %}<span class="field-error">{{ form.text.errors.0 }}</span>{% endif %}
+        </div>
+
+        <div class="row2">
+          <div>
+            <label for="{{ form.photo.id_for_label }}">{{ form.photo.label }}</label>
+            {{ form.photo }}
+            <span class="help">اختياري — صورة واضحة، الحد الأقصى 5 ميجابايت.</span>
+            {% if form.photo.errors %}<span class="field-error">{{ form.photo.errors.0 }}</span>{% endif %}
+          </div>
+          <div>
+            <label for="{{ form.trip.id_for_label }}">{{ form.trip.label }}</label>
+            {{ form.trip }}
+            {% if form.trip.errors %}<span class="field-error">{{ form.trip.errors.0 }}</span>{% endif %}
+          </div>
+        </div>
+
+        <div class="hp-field" aria-hidden="true">
+          <label for="{{ form.website.id_for_label }}">الموقع الإلكتروني</label>
+          {{ form.website }}
+        </div>
+
+        <button type="submit" class="btn btn-gold btn-block btn-lg">إرسال الرأي</button>
+      </form>
+    </div>
+  </div>
+</section>
+{% endblock %}

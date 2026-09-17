@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
-from .models import Booking, BookingStatus, SiteSettings, Trip
+from .models import Booking, BookingStatus, Review, ReviewStatus, SiteSettings, Trip
 
 
 class PageViewTests(TestCase):
@@ -327,3 +327,104 @@ class BookingActionTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, 'سعيد')
         self.assertNotContains(resp, pending.name)
+
+
+class ReviewTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.trip = Trip.objects.create(
+            name='رحلة مراجعات', slug='reviews-trip', trip_type='umrah', is_active=True
+        )
+        SiteSettings.load()
+
+    def _make(self, name, status, rating=5, with_trip=False):
+        return Review.objects.create(
+            name=name,
+            country='مصر',
+            rating=rating,
+            text=f'رأي {name}',
+            trip=self.trip if with_trip else None,
+            status=status,
+        )
+
+    def test_only_approved_reviews_appear_on_list(self):
+        self._make('منشور أحمد', ReviewStatus.APPROVED)
+        self._make('قيد محمد', ReviewStatus.PENDING)
+        self._make('مرفوض حاتم', ReviewStatus.REJECTED)
+        resp = self.client.get(reverse('core:reviews'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'منشور أحمد')
+        self.assertNotContains(resp, 'قيد محمد')
+        self.assertNotContains(resp, 'مرفوض حاتم')
+
+    def test_reviews_list_page_with_trip_name(self):
+        self._make('منشور مع رحلة', ReviewStatus.APPROVED, with_trip=True)
+        resp = self.client.get(reverse('core:reviews'))
+        self.assertContains(resp, 'رحلة مراجعات')
+
+    def test_submit_creates_pending_review_and_redirects(self):
+        resp = self.client.post(reverse('core:review_submit'), {
+            'name': 'أحمد محمود',
+            'country': 'مصر',
+            'rating': '5',
+            'text': 'رحلة ممتازة جداً',
+            'trip': self.trip.pk,
+        })
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(resp['Location'], reverse('core:reviews'))
+        review = Review.objects.get(name='أحمد محمود')
+        self.assertEqual(review.status, ReviewStatus.PENDING)
+        self.assertEqual(review.trip, self.trip)
+        follow = self.client.get(resp['Location'])
+        self.assertContains(follow, 'شكراً لك')
+
+    def test_rate_limit_one_submission_per_ip_per_24h(self):
+        for i in range(2):
+            resp = self.client.post(reverse('core:review_submit'), {
+                'name': f'مستخدم {i}',
+                'country': 'مصر',
+                'rating': '4',
+                'text': 'رأي سريع',
+            })
+            self.assertEqual(resp.status_code, 302)
+            resp = self.client.get(resp.url)
+        self.assertEqual(Review.objects.count(), 1)
+
+    def test_honeypot_blocks_spam(self):
+        self.client.post(reverse('core:review_submit'), {
+            'name': 'روبوت',
+            'country': 'مصر',
+            'rating': '5',
+            'text': 'سبام',
+            'website': 'http://spam.example.com',
+        })
+        self.assertEqual(Review.objects.count(), 0)
+
+    def test_submit_requires_rating(self):
+        resp = self.client.post(reverse('core:review_submit'), {
+            'name': 'بدون تقييم',
+            'country': 'مصر',
+            'text': 'نص ما',
+        })
+        self.assertEqual(Review.objects.count(), 0)
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'اختر تقييمك')
+
+    def test_pagination_12_per_page(self):
+        for i in range(13):
+            Review.objects.create(
+                name=f'عميل {i}', country='مصر', rating=5,
+                text='نص', status=ReviewStatus.APPROVED,
+            )
+        resp = self.client.get(reverse('core:reviews'))
+        self.assertContains(resp, 'عميل 12')
+        self.assertNotContains(resp, 'عميل 0')
+        self.assertContains(resp, 'صفحات الآراء')
+
+    def test_home_shows_latest_approved_reviews(self):
+        self._make('منشور الصفحة الرئيسية', ReviewStatus.APPROVED)
+        self._make('قيد مخفي', ReviewStatus.PENDING)
+        resp = self.client.get(reverse('core:home'))
+        self.assertContains(resp, 'شاهد كل الآراء')
+        self.assertContains(resp, 'منشور الصفحة الرئيسية')
+        self.assertNotContains(resp, 'قيد مخفي')

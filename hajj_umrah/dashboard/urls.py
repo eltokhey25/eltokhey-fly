@@ -22,6 +22,12 @@ urlpatterns = [
     path('bookings/<int:pk>/reject/', views.booking_reject, name='booking_reject'),
     path('bookings/<int:pk>/complete/', views.booking_complete, name='booking_complete'),
 
+    path('reviews/', views.review_list, name='reviews'),
+    path('reviews/<int:pk>/', views.review_detail, name='review_detail'),
+    path('reviews/<int:pk>/approve/', views.review_approve, name='review_approve'),
+    path('reviews/<int:pk>/reject/', views.review_reject, name='review_reject'),
+    path('reviews/<int:pk>/delete/', views.review_delete, name='review_delete'),
+
     path('settings/', views.settings_edit, name='settings'),
     path('sections/', views.sections_view, name='sections'),
 

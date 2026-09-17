@@ -1,7 +1,7 @@
 import re
 from urllib.parse import quote
 
-from .models import SiteSettings, TripType
+from .models import Review, ReviewStatus, SiteSettings, TripType
 
 
 def _digits(value):
@@ -26,4 +26,7 @@ def site_settings(request):
         ],
         'phone_tel_href': 'tel:' + _digits(settings.phone) if settings.phone else None,
         'whatsapp_href': _wa_href(settings.whatsapp),
+        'pending_reviews_count': Review.objects.filter(
+            status=ReviewStatus.PENDING
+        ).count(),
     }

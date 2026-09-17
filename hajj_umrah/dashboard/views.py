@@ -12,7 +12,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from core.models import Booking, BookingStatus, SiteSettings, Trip
+from core.models import Booking, BookingStatus, Review, ReviewStatus, SiteSettings, Trip
 from core.whatsapp import (
     booking_confirmed_message,
     booking_created_message,
@@ -292,6 +292,74 @@ def booking_complete(request, pk):
         f'تم تحديد حجز «{booking.name}» كرحلة مكتملة.',
     )
     return redirect('dashboard:booking_detail', pk=booking.pk)
+
+
+# --------------------------------------------------------------------------
+# Reviews
+# --------------------------------------------------------------------------
+@staff_required
+def review_list(request):
+    status = request.GET.get('status', '').strip()
+    query = request.GET.get('q', '').strip()
+    reviews = Review.objects.select_related('trip', 'approved_by').all()
+    if status in ReviewStatus.values:
+        reviews = reviews.filter(status=status)
+    if query:
+        reviews = reviews.filter(
+            Q(name__icontains=query) | Q(country__icontains=query)
+            | Q(text__icontains=query) | Q(trip__name__icontains=query)
+        )
+    context = {
+        'reviews': reviews,
+        'q': query,
+        'filter_status': status,
+        'status_choices': ReviewStatus.choices,
+        'pending_count': Review.objects.filter(status=ReviewStatus.PENDING).count(),
+        'page': 'reviews',
+    }
+    return render(request, 'dashboard/reviews/list.html', context)
+
+
+@staff_required
+def review_detail(request, pk):
+    review = get_object_or_404(Review, pk=pk)
+    context = {'review': review, 'page': 'reviews'}
+    return render(request, 'dashboard/reviews/detail.html', context)
+
+
+@staff_required
+@require_POST
+def review_approve(request, pk):
+    review = get_object_or_404(Review, pk=pk)
+    review.status = ReviewStatus.APPROVED
+    review.approved_at = timezone.now()
+    review.approved_by = request.user
+    review.rejection_reason = ''
+    review.save(update_fields=['status', 'approved_at', 'approved_by', 'rejection_reason'])
+    messages.success(request, f'تم نشر رأي «{review.name}» على الموقع.')
+    return redirect('dashboard:review_detail', pk=review.pk)
+
+
+@staff_required
+@require_POST
+def review_reject(request, pk):
+    review = get_object_or_404(Review, pk=pk)
+    review.status = ReviewStatus.REJECTED
+    review.rejection_reason = request.POST.get('rejection_reason', '').strip()[:500]
+    review.save(update_fields=['status', 'rejection_reason'])
+    messages.error(request, f'تم رفض رأي «{review.name}».')
+    return redirect('dashboard:review_detail', pk=review.pk)
+
+
+@staff_required
+@require_POST
+def review_delete(request, pk):
+    review = get_object_or_404(Review, pk=pk)
+    if review.photo:
+        review.photo.delete(save=False)
+    messages.success(request, f'تم حذف رأي «{review.name}».')
+    review.delete()
+    return redirect('dashboard:reviews')
 
 
 # --------------------------------------------------------------------------

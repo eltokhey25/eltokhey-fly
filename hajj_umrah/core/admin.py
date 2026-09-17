@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Booking, SiteSettings, Trip
+from .models import Booking, Review, SiteSettings, Trip
 
 
 class TripAdmin(admin.ModelAdmin):
@@ -24,6 +24,15 @@ class BookingAdmin(admin.ModelAdmin):
     list_editable = ('status',)
     search_fields = ('name', 'phone', 'email', 'reference_code', 'trip_label', 'notes')
     readonly_fields = ('name', 'phone', 'email', 'trip_label', 'trip_type', 'people', 'notes', 'created_at', 'confirmed_at', 'handled_by')
+
+
+@admin.register(Review)
+class ReviewAdmin(admin.ModelAdmin):
+    list_display = ('name', 'country', 'rating', 'status', 'trip', 'created_at')
+    list_filter = ('status', 'rating', 'country')
+    search_fields = ('name', 'country', 'text', 'trip__name')
+    list_editable = ('status',)
+    ordering = ('-created_at',)
 
 
 @admin.register(SiteSettings)

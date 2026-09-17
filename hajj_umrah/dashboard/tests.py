@@ -2,6 +2,8 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
+from core.models import Review, ReviewStatus, SiteSettings
+
 User = get_user_model()
 
 
@@ -186,3 +188,67 @@ class StaffContentAccessTests(TestCase):
     def test_staff_does_not_see_users_menu(self):
         resp = self.client.get(reverse('dashboard:overview'))
         self.assertNotContains(resp, 'المستخدمون')
+
+
+@override_settings(DEBUG=False)
+class ReviewActionTests(TestCase):
+    def setUp(self):
+        self.staff_pw = 'StaffPass123'
+        self.staff = User.objects.create_user(
+            'staffrev', 'staff@example.com', self.staff_pw, is_staff=True
+        )
+        self.client.login(username='staffrev', password=self.staff_pw)
+        SiteSettings.load()
+        self.review = Review.objects.create(
+            name='أحمد', country='مصر', rating=5, text='تجربة ممتازة',
+            status=ReviewStatus.PENDING,
+        )
+
+    def test_approve_publishes_and_sets_approver(self):
+        resp = self.client.post(reverse('dashboard:review_approve', args=[self.review.pk]))
+        self.assertRedirects(resp, reverse('dashboard:review_detail', args=[self.review.pk]))
+        self.review.refresh_from_db()
+        self.assertEqual(self.review.status, ReviewStatus.APPROVED)
+        self.assertIsNotNone(self.review.approved_at)
+        self.assertEqual(self.review.approved_by, self.staff)
+
+    def test_reject_sets_status_and_saves_reason(self):
+        resp = self.client.post(
+            reverse('dashboard:review_reject', args=[self.review.pk]),
+            {'rejection_reason': 'يحتوي إساءة'},
+        )
+        self.assertRedirects(resp, reverse('dashboard:review_detail', args=[self.review.pk]))
+        self.review.refresh_from_db()
+        self.assertEqual(self.review.status, ReviewStatus.REJECTED)
+        self.assertEqual(self.review.rejection_reason, 'يحتوي إساءة')
+
+    def test_delete_removes_review(self):
+        resp = self.client.post(reverse('dashboard:review_delete', args=[self.review.pk]))
+        self.assertRedirects(resp, reverse('dashboard:reviews'))
+        self.assertFalse(Review.objects.filter(pk=self.review.pk).exists())
+
+    def test_actions_require_post(self):
+        self.assertEqual(
+            self.client.get(reverse('dashboard:review_approve', args=[self.review.pk])).status_code,
+            405,
+        )
+
+    def test_list_filter_by_status(self):
+        approved = Review.objects.create(
+            name='منشور', country='السعودية', rating=4, text='رأي',
+            status=ReviewStatus.APPROVED,
+        )
+        resp = self.client.get(reverse('dashboard:reviews'), {'status': 'approved'})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'منشور')
+        self.assertNotContains(resp, self.review.name)
+
+    def test_only_staff_can_manage_reviews(self):
+        self.client.logout()
+        resp = self.client.post(reverse('dashboard:review_approve', args=[self.review.pk]))
+        self.assertEqual(resp.status_code, 302)
+        normal_pw = 'NormalPass123'
+        normal = User.objects.create_user('normalrev', 'n@example.com', normal_pw)
+        self.client.login(username='normalrev', password=normal_pw)
+        resp = self.client.get(reverse('dashboard:reviews'))
+        self.assertEqual(resp.status_code, 403)

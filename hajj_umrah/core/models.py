@@ -1,4 +1,10 @@
+from io import BytesIO
+from pathlib import PurePosixPath
+from uuid import uuid4
+
 from django.conf import settings
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
 from django.db import models
 from django.utils import timezone
 
@@ -14,6 +20,12 @@ class BookingStatus(models.TextChoices):
     CONFIRMED = 'confirmed', 'تم التأكيد'
     REJECTED = 'rejected', 'مرفوض'
     COMPLETED = 'completed', 'مكتمل'
+
+
+class ReviewStatus(models.TextChoices):
+    PENDING = 'pending', 'قيد المراجعة'
+    APPROVED = 'approved', 'منشور'
+    REJECTED = 'rejected', 'مرفوض'
 
 
 class Trip(models.Model):
@@ -136,6 +148,115 @@ class Booking(models.Model):
             BookingStatus.REJECTED: 'نأسف، لم نتمكن من تأكيد حجزك. تواصل معنا للمزيد',
             BookingStatus.COMPLETED: 'تمت رحلتك بنجاح. شكراً لك',
         }.get(self.status, '')
+
+
+REVIEW_COUNTRIES = [
+    ('مصر', 'مصر'),
+    ('السعودية', 'السعودية'),
+    ('الإمارات', 'الإمارات'),
+    ('الكويت', 'الكويت'),
+    ('قطر', 'قطر'),
+    ('البحرين', 'البحرين'),
+    ('عُمان', 'عُمان'),
+    ('الأردن', 'الأردن'),
+    ('العراق', 'العراق'),
+    ('اليمن', 'اليمن'),
+    ('سوريا', 'سوريا'),
+    ('لبنان', 'لبنان'),
+    ('فلسطين', 'فلسطين'),
+    ('ليبيا', 'ليبيا'),
+    ('تونس', 'تونس'),
+    ('الجزائر', 'الجزائر'),
+    ('المغرب', 'المغرب'),
+    ('السودان', 'السودان'),
+    ('تركيا', 'تركيا'),
+    ('المملكة المتحدة', 'المملكة المتحدة'),
+    ('ألمانيا', 'ألمانيا'),
+    ('فرنسا', 'فرنسا'),
+    ('الولايات المتحدة', 'الولايات المتحدة'),
+    ('كندا', 'كندا'),
+    ('أستراليا', 'أستراليا'),
+]
+
+
+class Review(models.Model):
+    name = models.CharField('اسم العميل', max_length=255)
+    country = models.CharField(
+        'الدولة', max_length=100, choices=REVIEW_COUNTRIES, default='مصر'
+    )
+    photo = models.ImageField(
+        'صورة العميل',
+        upload_to='reviews/',
+        blank=True,
+        null=True,
+    )
+    rating = models.PositiveSmallIntegerField(
+        'التقييم', choices=[(n, f'{n} نجوم') for n in range(1, 6)]
+    )
+    text = models.TextField('نص الرأي')
+    trip = models.ForeignKey(
+        Trip,
+        verbose_name='الرحلة',
+        related_name='reviews',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+    status = models.CharField(
+        'الحالة', max_length=20, choices=ReviewStatus.choices, default=ReviewStatus.PENDING
+    )
+    rejection_reason = models.CharField('سبب الرفض', max_length=500, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    approved_at = models.DateTimeField('تاريخ النشر', null=True, blank=True)
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        verbose_name='تمت الموافقة بواسطة',
+        related_name='approved_reviews',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+    ip_address = models.GenericIPAddressField('عنوان IP', null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'رأي عميل'
+        verbose_name_plural = 'آراء العملاء'
+
+    def __str__(self):
+        return f'{self.name} — {'⭐' * self.rating}'
+
+    def save(self, *args, **kwargs):
+        resize_photo = self.pk is None and bool(self.photo)
+        super().save(*args, **kwargs)
+        if resize_photo:
+            self._compress_photo()
+
+    def _compress_photo(self, limit=400, quality=85):
+        if not self.photo:
+            return
+        try:
+            from PIL import Image
+
+            current_name = self.photo.name
+            with self.photo.open('rb') as fh:
+                img = Image.open(fh)
+                img.thumbnail((limit, limit), Image.Resampling.LANCZOS)
+                if img.mode not in ('RGB', 'L'):
+                    img = img.convert('RGB')
+                buf = BytesIO()
+                ext = PurePosixPath(current_name).suffix.lower()
+                fmt = 'PNG' if ext == '.png' else 'JPEG'
+                img.save(buf, fmt, quality=quality)
+            ext_out = '.png' if fmt == 'PNG' else '.jpg'
+            new_name = f'{uuid4().hex}{ext_out}'
+            default_storage.delete(current_name)
+            self.photo.save(
+                new_name, ContentFile(buf.getvalue()), save=False
+            )
+            super().save(update_fields=['photo'])
+        except Exception:
+            default_storage.delete(current_name)
 
 
 class SiteSettings(models.Model):

@@ -28,6 +28,10 @@
         <a href="{% url 'dashboard:overview' %}" class="{% if page == 'overview' %}active{% endif %}"><span class="nav-ico">📊</span> نظرة عامة</a>
         <a href="{% url 'dashboard:trips' %}" class="{% if page == 'trips' %}active{% endif %}"><span class="nav-ico">🚌</span> الرحلات</a>
         <a href="{% url 'dashboard:bookings' %}" class="{% if page == 'bookings' %}active{% endif %}"><span class="nav-ico">📩</span> طلبات الحجز</a>
+        <a href="{% url 'dashboard:reviews' %}" class="{% if page == 'reviews' %}active{% endif %}">
+          <span class="nav-ico">⭐</span> آراء العملاء
+          {% if pending_reviews_count %}<span class="card-badge">{{ pending_reviews_count }}</span>{% endif %}
+        </a>
         <a href="{% url 'dashboard:preview' %}" class="{% if page == 'preview' %}active{% endif %}"><span class="nav-ico">👁</span> المعاينة الحية</a>
       </div>
       <div class="sidebar-nav-group">

@@ -70,6 +70,7 @@
       <ul>
         <li><a href="{% url 'core:home' %}">الرئيسية</a></li>
         <li><a href="{% url 'core:trips' %}">رحلاتنا</a></li>
+        <li><a href="{% url 'core:reviews' %}">آراء عملائنا</a></li>
         <li><a href="{% url 'core:track_booking' %}">تتبع حجزك</a></li>
         <li><a href="{% url 'core:about' %}">من نحن</a></li>
       </ul>
@@ -85,6 +86,16 @@
 </header>
 
 <main id="main">
+  {% if messages %}
+    <div class="container messages">
+      {% for message in messages %}
+        <div class="flash-message {% if message.tags %}flash-{{ message.tags }}{% endif %}" role="status">
+          <span>{{ message }}</span>
+          <button type="button" class="flash-x" onclick="this.closest('.flash-message').remove()" aria-label="إغلاق">✕</button>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
   {% block content %}{% endblock %}
 </main>
 
@@ -100,6 +111,7 @@
       <ul>
         <li><a href="{% url 'core:home' %}">الرئيسية</a></li>
         <li><a href="{% url 'core:trips' %}">رحلاتنا</a></li>
+        <li><a href="{% url 'core:reviews' %}">آراء عملائنا</a></li>
         <li><a href="{% url 'core:track_booking' %}">تتبع حجزك</a></li>
         <li><a href="{% url 'core:booking' %}">تواصل / حجز</a></li>
         <li><a href="{% url 'core:about' %}">من نحن</a></li>

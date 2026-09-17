@@ -126,4 +126,24 @@
     </section>
   {% endif %}
 {% endfor %}
+
+{% if latest_reviews %}
+  <section class="section section-tint">
+    <div class="container">
+      <div class="section-head reveal">
+        <span class="eyebrow"><span class="eyebrow-dot"></span> شهادات</span>
+        <h2>آراء عملائنا</h2>
+        <p>تجارب حقيقية من ضيوفنا بعد أداء مناسكهم.</p>
+      </div>
+      <div class="review-grid">
+        {% for review in latest_reviews %}
+          {% include 'includes/review_card.html' with review=review %}
+        {% endfor %}
+      </div>
+      <div class="text-center" style="margin-top:32px;">
+        <a class="btn btn-gold btn-lg" href="{% url 'core:reviews' %}">شاهد كل الآراء</a>
+      </div>
+    </div>
+  </section>
+{% endif %}
 {% endblock %}

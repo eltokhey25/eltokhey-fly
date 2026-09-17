@@ -1,0 +1,89 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}آراء العملاء{% endblock %}
+{% block page_title %}آراء العملاء{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>إدارة آراء العملاء</h1>
+    <p>راجع الآراء الواردة واعتمد ما يليق بالنشر على الموقع.</p>
+  </div>
+  {% if pending_count %}
+    <a class="btn" href="{% url 'dashboard:reviews' %}?status=pending">⏳ {{ pending_count }} بانتظار المراجعة</a>
+  {% endif %}
+</div>
+
+<div class="panel">
+  <div class="panel-head">
+    <form method="get" style="display:flex;gap:8px;flex-wrap:wrap;">
+      <input class="input" type="search" name="q" placeholder="بحث بالاسم أو الدولة أو نص الرأي…" value="{{ q }}">
+      <select class="input" name="status" onchange="this.form.submit()" style="max-width:200px;">
+        <option value="">كل الحالات</option>
+        {% for value, label in status_choices %}
+          <option value="{{ value }}" {% if filter_status == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <button class="btn btn-ghost btn-sm" type="submit">بحث</button>
+    </form>
+  </div>
+
+  <div class="panel-body-flush table-wrap">
+    {% if reviews %}
+      <table class="table">
+        <thead>
+          <tr><th></th><th>الاسم / الدولة</th><th>التقييم</th><th>نص الرأي</th><th>الرحلة</th><th>الحالة</th><th>التاريخ</th><th></th></tr>
+        </thead>
+        <tbody>
+          {% for review in reviews %}
+            <tr>
+              <td>
+                {% if review.photo %}
+                  <img src="{{ review.photo.url }}" alt="{{ review.name }}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;">
+                {% else %}
+                  <span style="width:44px;height:44px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:var(--primary-soft);color:var(--primary-2);font-weight:800;">{{ review.name|first }}</span>
+                {% endif %}
+              </td>
+              <td>
+                <a href="{% url 'dashboard:review_detail' review.pk %}"><strong>{{ review.name }}</strong></a><br>
+                <span class="muted">📍 {{ review.country }}</span>
+              </td>
+              <td>
+                {% for i in "12345" %}
+                  <span class="{% if forloop.counter <= review.rating %}stars-gold{% else %}stars-dim{% endif %}">★</span>
+                {% endfor %}
+              </td>
+              <td style="max-width:320px;">{{ review.text|truncatechars:90 }}</td>
+              <td>{% if review.trip %}{{ review.trip.name }}{% else %}<span class="muted">—</span>{% endif %}</td>
+              <td>
+                {% if review.status == 'pending' %}<span class="badge badge-gold">قيد المراجعة</span>
+                {% elif review.status == 'approved' %}<span class="badge badge-green">منشور</span>
+                {% elif review.status == 'rejected' %}<span class="badge badge-red">مرفوض</span>
+                {% else %}<span class="badge badge-gray">{{ review.status }}</span>{% endif %}
+              </td>
+              <td><span class="muted">{{ review.created_at|date:"Y-m-d" }}</span></td>
+              <td>
+                <div class="row-actions" style="flex-wrap:wrap;">
+                  <a class="btn btn-ghost btn-sm" href="{% url 'dashboard:review_detail' review.pk %}">عرض</a>
+                  {% if review.status == 'pending' %}
+                    <form method="post" action="{% url 'dashboard:review_approve' review.pk %}">
+                      {% csrf_token %}
+                      <button class="btn btn-sm" type="submit">نشر</button>
+                    </form>
+                  {% endif %}
+                  <form method="post" action="{% url 'dashboard:review_delete' review.pk %}" data-confirm="حذف رأي «{{ review.name }}»؟">
+                    {% csrf_token %}
+                    <button class="btn btn-danger-ghost btn-sm" type="submit">حذف</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <div class="empty"><span class="empty-ico">⭐</span><p>لا توجد آراء مطابقة.</p></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,117 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}رأي — {{ review.name }}{% endblock %}
+{% block page_title %}تفاصيل الرأي{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ review.name }}</h1>
+    <p>تم الاستلام في {{ review.created_at|date:"Y-m-d H:i" }}</p>
+  </div>
+  <div class="topbar-actions">
+    <a class="btn btn-outline" href="{% url 'dashboard:reviews' %}">→ كل الآراء</a>
+  </div>
+</div>
+
+<div class="panel" style="margin-bottom:20px;">
+  <div class="panel-body" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+    <div style="display:flex;align-items:center;gap:14px;">
+      {% if review.photo %}
+        <img src="{{ review.photo.url }}" alt="{{ review.name }}" style="width:64px;height:64px;border-radius:50%;object-fit:cover;">
+      {% else %}
+        <span style="width:64px;height:64px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:var(--primary-soft);color:var(--primary-2);font-weight:800;font-size:1.3rem;">{{ review.name|first }}</span>
+      {% endif %}
+      <div>
+        <strong style="font-size:1.15rem;">{{ review.name }}</strong><br>
+        <span class="muted">📍 {{ review.country }}</span>
+      </div>
+    </div>
+    <span style="font-size:1rem;">
+      {% if review.status == 'pending' %}<span class="badge badge-gold">قيد المراجعة</span>
+      {% elif review.status == 'approved' %}<span class="badge badge-green">منشور</span>
+      {% elif review.status == 'rejected' %}<span class="badge badge-red">مرفوض</span>
+      {% else %}<span class="badge badge-gray">{{ review.status }}</span>{% endif %}
+    </span>
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="panel">
+    <div class="panel-head"><h3>تفاصيل الرأي</h3></div>
+    <div class="panel-body">
+      <ul class="summary-list" style="list-style:none;display:flex;flex-direction:column;gap:10px;">
+        <li style="display:flex;justify-content:space-between;border-bottom:1px solid var(--border);padding:8px 0;">
+          <span class="muted">التقييم</span>
+          <strong>
+            {% for i in "12345" %}
+              <span class="{% if forloop.counter <= review.rating %}stars-gold{% else %}stars-dim{% endif %}">★</span>
+            {% endfor %}
+          </strong>
+        </li>
+        <li style="display:flex;justify-content:space-between;border-bottom:1px solid var(--border);padding:8px 0;">
+          <span class="muted">الرحلة</span>
+          <strong>{% if review.trip %}<a href="{% url 'dashboard:trip_edit' review.trip.slug %}">{{ review.trip.name }}</a>{% else %}—{% endif %}</strong>
+        </li>
+        <li style="display:flex;justify-content:space-between;border-bottom:1px solid var(--border);padding:8px 0;">
+          <span class="muted">عنوان IP</span>
+          <strong class="ltr">{{ review.ip_address|default:'—' }}</strong>
+        </li>
+        <li style="display:flex;justify-content:space-between;border-bottom:1px solid var(--border);padding:8px 0;">
+          <span class="muted">تاريخ الاستلام</span>
+          <strong>{{ review.created_at|date:"Y-m-d H:i" }}</strong>
+        </li>
+        {% if review.approved_at %}
+          <li style="display:flex;justify-content:space-between;border-bottom:1px solid var(--border);padding:8px 0;">
+            <span class="muted">تاريخ النشر</span>
+            <strong>{{ review.approved_at|date:"Y-m-d H:i" }}</strong>
+          </li>
+        {% endif %}
+        {% if review.approved_by %}
+          <li style="display:flex;justify-content:space-between;padding:8px 0;">
+            <span class="muted">تمت الموافقة بواسطة</span>
+            <strong>{{ review.approved_by.get_full_name|default:review.approved_by.username }}</strong>
+          </li>
+        {% endif %}
+      </ul>
+
+      <div style="display:flex;gap:8px;margin-top:18px;flex-wrap:wrap;">
+        {% if review.status != 'approved' %}
+          <form method="post" action="{% url 'dashboard:review_approve' review.pk %}" data-confirm="نشر رأي «{{ review.name }}» على الموقع؟">
+            {% csrf_token %}
+            <button class="btn" type="submit">✅ نشر الرأي</button>
+          </form>
+        {% endif %}
+        {% if review.status != 'rejected' %}
+          <form method="post" action="{% url 'dashboard:review_reject' review.pk %}" data-confirm="رفض رأي «{{ review.name }}»؟">
+            {% csrf_token %}
+            <button class="btn btn-warning" type="submit">⛔ رفض الرأي</button>
+          </form>
+        {% endif %}
+        <form method="post" action="{% url 'dashboard:review_delete' review.pk %}" data-confirm="حذف رأي «{{ review.name }}» نهائياً؟">
+          {% csrf_token %}
+          <button class="btn btn-danger" type="submit">🗑 حذف الرأي</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><h3>نص الرأي</h3></div>
+    <div class="panel-body">
+      <p style="background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;white-space:pre-wrap;">{{ review.text }}</p>
+      {% if review.status == 'rejected' %}
+        <label class="muted" style="display:block;margin-top:16px;font-weight:700;">سبب الرفض (اختياري)</label>
+        <form method="post" action="{% url 'dashboard:review_reject' review.pk %}" style="margin-top:8px;">
+          {% csrf_token %}
+          <textarea class="input textarea" name="rejection_reason" rows="3" placeholder="اكتب سبب الرفض ليتضح للمشرفين..." maxlength="500">{{ review.rejection_reason }}</textarea>
+          <button class="btn btn-warning btn-sm" type="submit" style="margin-top:8px;">حفظ سبب الرفض</button>
+        </form>
+        {% if review.rejection_reason %}
+          <div class="empty" style="margin-top:14px;"><span class="empty-ico">📝</span><p>{{ review.rejection_reason }}</p></div>
+        {% endif %}
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

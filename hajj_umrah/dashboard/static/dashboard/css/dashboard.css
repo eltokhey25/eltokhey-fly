@@ -332,6 +332,9 @@ button { font-family: var(--font); cursor: pointer; }
 .badge-blue { background: #e8effa; color: #1d4ed8; }
 .badge-teal { background: #e0f4f3; color: #0b7a75; }
 
+.stars-gold { color: #f59e0b; }
+.stars-dim { color: #d1d5db; }
+
 /* ===== Forms ===== */
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .form-grid .full { grid-column: 1 / -1; }
