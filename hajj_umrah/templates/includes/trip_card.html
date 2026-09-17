@@ -31,6 +31,6 @@
       {% if trip.transport %}<span>🚌 {{ trip.transport }}</span>{% endif %}
     </div>
 
-    <a class="btn btn-block" href="{% url 'core:booking' %}">احجز الآن</a>
+    <a class="btn btn-block" href="{% url 'core:trip_detail' trip.slug %}">عرض الرحلة</a>
   </div>
 </article>
