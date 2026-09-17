@@ -178,6 +178,34 @@ REVIEW_COUNTRIES = [
     ('أستراليا', 'أستراليا'),
 ]
 
+COUNTRY_FLAGS = {
+    'مصر': '🇪🇬',
+    'السعودية': '🇸🇦',
+    'الإمارات': '🇦🇪',
+    'الكويت': '🇰🇼',
+    'قطر': '🇶🇦',
+    'البحرين': '🇧🇭',
+    'عُمان': '🇴🇲',
+    'الأردن': '🇯🇴',
+    'العراق': '🇮🇶',
+    'اليمن': '🇾🇪',
+    'سوريا': '🇸🇾',
+    'لبنان': '🇱🇧',
+    'فلسطين': '🇵🇸',
+    'ليبيا': '🇱🇾',
+    'تونس': '🇹🇳',
+    'الجزائر': '🇩🇿',
+    'المغرب': '🇲🇦',
+    'السودان': '🇸🇩',
+    'تركيا': '🇹🇷',
+    'المملكة المتحدة': '🇬🇧',
+    'ألمانيا': '🇩🇪',
+    'فرنسا': '🇫🇷',
+    'الولايات المتحدة': '🇺🇸',
+    'كندا': '🇨🇦',
+    'أستراليا': '🇦🇺',
+}
+
 
 class Review(models.Model):
     name = models.CharField('اسم العميل', max_length=255)
@@ -225,6 +253,10 @@ class Review(models.Model):
 
     def __str__(self):
         return f'{self.name} — {'⭐' * self.rating}'
+
+    @property
+    def country_flag(self):
+        return COUNTRY_FLAGS.get(self.country, '')
 
     def save(self, *args, **kwargs):
         resize_photo = self.pk is None and bool(self.photo)

@@ -421,10 +421,31 @@ class ReviewTests(TestCase):
         self.assertNotContains(resp, 'عميل 0')
         self.assertContains(resp, 'صفحات الآراء')
 
-    def test_home_shows_latest_approved_reviews(self):
-        self._make('منشور الصفحة الرئيسية', ReviewStatus.APPROVED)
+    def test_home_shows_reviews_after_hero_with_button_when_more_than_three(self):
+        for i in range(4):
+            self._make(f'منشور الصفحة الرئيسية {i}', ReviewStatus.APPROVED, with_trip=(i == 0))
         self._make('قيد مخفي', ReviewStatus.PENDING)
         resp = self.client.get(reverse('core:home'))
-        self.assertContains(resp, 'شاهد كل الآراء')
-        self.assertContains(resp, 'منشور الصفحة الرئيسية')
+        html = resp.content.decode()
+        self.assertContains(resp, 'منشور الصفحة الرئيسية 1')
+        self.assertContains(resp, 'منشور الصفحة الرئيسية 3')
         self.assertNotContains(resp, 'قيد مخفي')
+        self.assertContains(resp, 'ثقة عملائنا هي رأس مالنا')
+        self.assertContains(resp, 'أكثر من 4 عميل سعيد')
+        self.assertContains(resp, 'شاهد كل الآراء')
+        self.assertLess(html.find('آراء عملائنا'), html.find('id="trips"'))
+
+    def test_home_reviews_section_hidden_without_approved(self):
+        resp = self.client.get(reverse('core:home'))
+        html = resp.content.decode()
+        self.assertNotContains(resp, 'ثقة عملائنا هي رأس مالنا')
+        self.assertNotContains(resp, 'reviews-home-grid')
+        self.assertNotEqual(html.find('id="trips"'), -1)
+
+    def test_home_reviews_button_hidden_when_three_or_less(self):
+        for i in range(3):
+            self._make(f'رأي {i}', ReviewStatus.APPROVED)
+        resp = self.client.get(reverse('core:home'))
+        self.assertContains(resp, 'آراء عملائنا')
+        self.assertContains(resp, 'أكثر من 3 عميل سعيد')
+        self.assertNotContains(resp, 'شاهد كل الآراء')

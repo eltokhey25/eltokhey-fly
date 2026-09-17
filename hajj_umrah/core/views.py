@@ -34,11 +34,13 @@ def _wa_trip_href(whatsapp, trip_name):
 
 def home(request):
     trips = Trip.objects.filter(is_active=True)
+    approved = Review.objects.filter(status=ReviewStatus.APPROVED)
     context = {
         'trips': trips,
-        'latest_reviews': Review.objects.filter(
-            status=ReviewStatus.APPROVED
-        ).order_by('-approved_at', '-created_at')[:3],
+        'latest_reviews': approved.select_related('trip').order_by(
+            '-approved_at', '-created_at'
+        )[:3],
+        'reviews_count': approved.count(),
         'book_title': 'رحلات السنة',
         'book_sub': 'جميع رحلات الحج والعمرة مرتبة حسب موعد الانطلاق، اضغط على أي رحلة لعرض برنامج السير بالتفصيل من الخروج حتى العودة.',
     }
