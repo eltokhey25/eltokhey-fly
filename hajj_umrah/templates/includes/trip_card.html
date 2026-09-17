@@ -2,27 +2,35 @@
 <article class="trip-card reveal" data-type="{{ trip.trip_type }}">
   <div class="trip-card-media">
     {% if trip.thumbnail %}
-      <img src="{{ trip.thumbnail.url }}" alt="{{ trip.name }} — صورة الرحلة">
+      <img src="{{ trip.thumbnail.url }}" alt="{{ trip.name }} — صورة الرحلة" loading="lazy">
     {% else %}
       <div class="noimg">🕌</div>
     {% endif %}
-    <span class="trip-type-badge">{{ trip.get_trip_type_display }}</span>
-    {% if trip.price %}
-      <span class="trip-price-badge">{{ trip.price_display }}</span>
-    {% endif %}
+    <span class="trip-type-badge badge-{{ trip.trip_type }}">{{ trip.get_trip_type_display }}</span>
   </div>
+
   <div class="trip-card-body">
     <h3><a href="{% url 'core:trip_detail' trip.slug %}">{{ trip.name }}</a></h3>
+
+    <div class="trip-price-row">
+      <span class="trip-price" aria-label="سعر الرحلة">
+        {{ trip.price_display }}
+        {% if trip.price %}<small>/ للشخص</small>{% endif %}
+      </span>
+      {% if trip.remaining is not None %}
+        <span class="availability {% if trip.remaining > 0 %}ok{% else %}full{% endif %}">
+          {% if trip.remaining > 0 %}✓ متاح {{ trip.remaining }} مكان{% else %}✕ مكتملة العدد{% endif %}
+        </span>
+      {% endif %}
+    </div>
+
     <div class="trip-meta">
       {% if trip.departure %}<span>📅 {{ trip.departure|date:"Y-m-d" }}</span>{% endif %}
       {% if trip.duration %}<span>⏱ {{ trip.duration }}</span>{% endif %}
+      <span>📍 مكة المكرمة</span>
       {% if trip.transport %}<span>🚌 {{ trip.transport }}</span>{% endif %}
     </div>
-    {% if trip.remaining is not None %}
-      <span class="availability {% if trip.remaining > 0 %}ok{% else %}full{% endif %}">
-        {% if trip.remaining > 0 %}✓ الأماكن المتبقية: {{ trip.remaining }}{% else %}✕ مكتملة العدد{% endif %}
-      </span>
-    {% endif %}
-    <a class="btn" href="{% url 'core:trip_detail' trip.slug %}">عرض تفاصيل الرحلة</a>
+
+    <a class="btn btn-block" href="{% url 'core:booking' %}">احجز الآن</a>
   </div>
 </article>

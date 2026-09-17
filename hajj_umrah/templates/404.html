@@ -5,18 +5,21 @@
 {% block body_class %}error404{% endblock %}
 
 {% block content %}
-<section class="hero">
-  <div class="container">
-    <h1>404 — الصفحة غير موجودة</h1>
+<section class="hero hero-inner">
+  <div class="container reveal">
+    <span class="hero-eyebrow">⚠️ 404</span>
+    <h1>الصفحة غير موجودة</h1>
     <p>عذراً، الرابط الذي تحاول الوصول إليه غير موجود أو تم نقله.</p>
   </div>
 </section>
 
 <section class="section">
-  <div class="container text-center">
-    <h2 style="color:var(--primary);margin-bottom:14px;">يمكنك العودة لاستكشاف رحلاتنا</h2>
-    <a class="btn" href="{% url 'core:home' %}" style="margin-inline-end:10px;">🏠 العودة للرئيسية</a>
-    <a class="btn btn-outline" href="{% url 'core:trips' %}">🕋 تصفح الرحلات</a>
+  <div class="container text-center error-404">
+    <h2>يمكنك العودة لاستكشاف رحلاتنا</h2>
+    <div class="hero-ctas">
+      <a class="btn btn-gold btn-lg" href="{% url 'core:home' %}">🏠 العودة للرئيسية</a>
+      <a class="btn btn-outline btn-lg" href="{% url 'core:trips' %}">🕋 تصفح الرحلات</a>
+    </div>
   </div>
 </section>
 {% endblock %}

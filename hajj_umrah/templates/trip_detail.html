@@ -21,11 +21,11 @@
 {% endblock %}
 
 {% block content %}
-<section class="trip-hero">
+<section class="hero hero-inner">
   <div class="container reveal">
     <h1>{{ trip.name }}</h1>
-    <span class="trip-type-badge">{{ trip.get_trip_type_display }}</span>
-    <div class="badges">
+    <span class="trip-type-badge badge-{{ trip.trip_type }}">{{ trip.get_trip_type_display }}</span>
+    <div class="trip-hero-badges">
       {% if trip.departure %}<span>📅 الخروج: {{ trip.departure|date:"Y-m-d" }}</span>{% endif %}
       {% if trip.return_date %}<span>↩️ العودة: {{ trip.return_date|date:"Y-m-d" }}</span>{% endif %}
       {% if trip.duration %}<span>⏱ المدة: {{ trip.duration }}</span>{% endif %}
@@ -39,12 +39,12 @@
     {% if trip.description %}
       <div class="trip-desc" style="margin-top:0;">
         <h2 style="margin:0 0 10px;">نبذة عن الرحلة</h2>
-        <p style="color:var(--ink);text-shadow:none;">{{ trip.description|linebreaksbr }}</p>
+        <p>{{ trip.description|linebreaksbr }}</p>
       </div>
     {% endif %}
 
     <h2>برنامج السير بالتفصيل</h2>
-    <p class="cta-sub" style="margin-bottom:20px;">يبدأ البرنامج من مكان الخروج وصولاً إلى العودة، بالترتيب الزمني الذي تسير به الرحلة.</p>
+    <p style="margin-bottom:20px;">يبدأ البرنامج من مكان الخروج وصولاً إلى العودة، بالترتيب الزمني الذي تسير به الرحلة.</p>
 
     {% if trip.itinerary %}
       <ol class="timeline">
@@ -91,7 +91,7 @@
       </ul>
     </div>
 
-    <div class="trip-desc" style="margin-top:24px;">
+    <div class="trip-desc">
       <h2 style="margin:0;">معلومات التواصل مع {{ site.company }}</h2>
       <ul class="list-checks" style="margin-top:14px;">
         {% if site.phone %}<li><a href="{{ phone_tel_href }}">📞 هاتف: {{ site.phone }}</a></li>{% endif %}
@@ -119,9 +119,9 @@
           </p>
         {% endif %}
       </div>
-      <a class="btn" style="width:100%;text-align:center;margin-top:18px;" href="{% url 'core:booking' %}">احجز هذه الرحلة</a>
+      <a class="btn btn-block" style="margin-top:18px;" href="{% url 'core:booking' %}">احجز هذه الرحلة</a>
       {% if wa_trip_href %}
-        <a class="btn btn-outline" style="width:100%;text-align:center;margin-top:10px;" href="{{ wa_trip_href }}" target="_blank" rel="noopener">💬 احجز عبر واتساب</a>
+        <a class="btn btn-outline btn-block" style="margin-top:10px;" href="{{ wa_trip_href }}" target="_blank" rel="noopener">💬 احجز عبر واتساب</a>
       {% endif %}
     </div>
   </aside>

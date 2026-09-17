@@ -9,19 +9,20 @@
 {% block body_class %}page-track-booking{% endblock %}
 
 {% block content %}
-<section class="hero">
+<section class="hero hero-inner">
   <div class="container reveal">
-    <h1>📦 تتبع حجزك</h1>
+    <span class="hero-eyebrow">🔎 تتبع</span>
+    <h1>تتبع حجزك</h1>
     <p>أدخل رقم الحجز (مثل HJ-2026-0001) أو رقم هاتفك لمعرفة حالة طلبك.</p>
   </div>
 </section>
 
-<main class="page-gap">
+<section class="section section-alt">
   <div class="container">
     <div class="track-card reveal">
       <form class="track-form contact-form" method="get" autocomplete="off">
-        <input type="search" name="q" value="{{ q }}" placeholder="رقم الحجز أو رقم الهاتف…" aria-label="رقم الحجز أو رقم الهاتف">
-        <button class="btn" type="submit" style="white-space:nowrap;">تتبع</button>
+        <input type="search" name="q" value="{{ q }}" placeholder="رقم الحجز أو رقم الهاتف…" aria-label="رقم الحجز أو رقم الهاتف" dir="auto">
+        <button class="btn btn-gold" type="submit" style="white-space:nowrap;">تتبع</button>
       </form>
 
       {% if not_found %}
@@ -75,5 +76,5 @@
       {% endif %}
     </div>
   </div>
-</main>
+</section>
 {% endblock %}

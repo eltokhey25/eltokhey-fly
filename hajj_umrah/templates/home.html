@@ -20,9 +20,33 @@
   {% if section == 'hero' %}
     <section class="hero">
       <div class="container reveal">
+        <span class="hero-eyebrow">🕋 وكالة متخصصة للحج والعمرة</span>
         <h1>{{ site.hero_title }}</h1>
         <p>{{ site.hero_sub }}</p>
-        <a class="btn btn-light" href="#trips">{{ site.hero_btn }}</a>
+        <div class="hero-ctas">
+          <a class="btn btn-gold btn-lg" href="#trips">{{ site.hero_btn|default:"تصفح الرحلات" }}</a>
+          <a class="btn btn-outline-light btn-lg" href="{% url 'core:booking' %}">تواصل معنا</a>
+        </div>
+      </div>
+      <a class="scroll-hint" href="#trips" aria-label="الانتقال إلى الرحلات بالأسفل">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+      </a>
+    </section>
+
+    <section class="trust-bar" aria-label="مزايا رسمية نقدمها">
+      <div class="container trust-grid reveal">
+        <div class="trust-item">
+          <span class="trust-icon">🕋</span>
+          <div><strong>وكلاء رسميون</strong><span>تراخيص معتمدة لتنظيم الحج والعمرة</span></div>
+        </div>
+        <div class="trust-item">
+          <span class="trust-icon">🙋</span>
+          <div><strong>مرافقون معتمدون</strong><span>مشايخ وإرشاد ديني متخصص طوال الرحلة</span></div>
+        </div>
+        <div class="trust-item">
+          <span class="trust-icon">🛏</span>
+          <div><strong>إقامة قريبة من الحرم</strong><span>سكن مريح قريب من الحرمين الشريفين</span></div>
+        </div>
       </div>
     </section>
 
@@ -30,6 +54,7 @@
     <section class="section" id="trips">
       <div class="container">
         <div class="section-head reveal">
+          <span class="eyebrow"><span class="eyebrow-dot"></span> برامجنا</span>
           <h2>{{ site.trips_title }}</h2>
           <p>{{ site.trips_sub }}</p>
         </div>
@@ -54,49 +79,49 @@
     </section>
 
   {% elif section == 'why' %}
-    <section class="section">
+    <section class="section section-tint">
       <div class="container">
         <div class="section-head reveal">
+          <span class="eyebrow"><span class="eyebrow-dot"></span> لماذا نحن</span>
           <h2>{{ site.why_title }}</h2>
+          <p>راحة روحانية ورعاية كاملة من لحظة الخروج حتى العودة.</p>
         </div>
-        <div class="trip-grid">
-          <div class="trip-card reveal">
-            <div class="trip-card-body">
-              <h3>🕋 رحلات مُرخصة ورسمية</h3>
-              <p>نعمل بتراخيص رسمية من الجهات المعنية لتنظيم موسمي الحج والعمرة.</p>
-            </div>
+        <div class="feature-grid">
+          <div class="feature-card reveal">
+            <span class="feature-icon">🕋</span>
+            <h3>رحلات مُرخصة ورسمية</h3>
+            <p>نعمل بتراخيص رسمية من الجهات المعنية لتنظيم موسمي الحج والعمرة.</p>
           </div>
-          <div class="trip-card reveal">
-            <div class="trip-card-body">
-              <h3>🗺 برنامج سير مُنظَّم</h3>
-              <p>كل رحلة لها برنامج سير يومي واضح منذ الخروج وحتى العودة إلى مكان إقامتك.</p>
-            </div>
+          <div class="feature-card reveal">
+            <span class="feature-icon">🗺</span>
+            <h3>برنامج سير مُنظَّم</h3>
+            <p>كل رحلة لها برنامج سير يومي واضح منذ الخروج وحتى العودة إلى مكان إقامتك.</p>
           </div>
-          <div class="trip-card reveal">
-            <div class="trip-card-body">
-              <h3>🙋 مرافقون معتمدون</h3>
-              <p>مشايخ ومرشدون متخصصون يرافقون المجموعة لإروائهم بأحكام المناسك.</p>
-            </div>
+          <div class="feature-card reveal">
+            <span class="feature-icon">🙋</span>
+            <h3>مرافقون معتمدون</h3>
+            <p>مشايخ ومرشدون متخصصون يرافقون المجموعة لإروائهم بأحكام المناسك.</p>
           </div>
-          <div class="trip-card reveal">
-            <div class="trip-card-body">
-              <h3>🛏 سكن وإقامة مريحة</h3>
-              <p>إقامة قريبة من الحرمين الشريفين ووسائل نقل مريحة طوال الرحلة.</p>
-            </div>
+          <div class="feature-card reveal">
+            <span class="feature-icon">🛏</span>
+            <h3>سكن وإقامة مريحة</h3>
+            <p>إقامة قريبة من الحرمين الشريفين ووسائل نقل مريحة طوال الرحلة.</p>
           </div>
         </div>
       </div>
     </section>
 
   {% elif section == 'cta' %}
-    <section class="section">
+    <section class="section section-dark">
       <div class="container text-center reveal">
-        <h2 class="cta-title" style="margin-bottom:10px;">{{ site.cta_title }}</h2>
-        <p class="cta-sub" style="margin-bottom:20px;">{{ site.cta_sub }}</p>
-        {% if site.phone %}
-          <a class="btn" href="{{ phone_tel_href }}" style="margin-inline-end:10px;">📞 اتصل الآن</a>
-        {% endif %}
-        <a class="btn btn-outline" href="{% url 'core:booking' %}">احجز رحلتك</a>
+        <h2 class="cta-title">{{ site.cta_title }}</h2>
+        <p class="cta-sub">{{ site.cta_sub }}</p>
+        <div class="hero-ctas">
+          {% if site.phone %}
+            <a class="btn btn-gold btn-lg" href="{{ phone_tel_href }}">📞 اتصل الآن</a>
+          {% endif %}
+          <a class="btn btn-outline-light btn-lg" href="{% url 'core:booking' %}">احجز رحلتك</a>
+        </div>
       </div>
     </section>
   {% endif %}

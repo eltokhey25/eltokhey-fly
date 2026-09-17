@@ -11,24 +11,25 @@
 {% block body_class %}page-template-template-about{% endblock %}
 
 {% block content %}
-<section class="hero">
+<section class="hero hero-inner">
   <div class="container reveal">
+    <span class="hero-eyebrow">🚀 من نحن</span>
     <h1>من نحن</h1>
     <p>تعرف على {{ site.company }}</p>
   </div>
 </section>
 
-<main class="page-gap">
+<section class="section section-alt">
   <div class="container">
     <div class="about-grid">
       <div class="trip-desc reveal-left">
-        <h2 style="color:var(--primary);margin:0 0 10px;"><span style="color:var(--accent);">عن</span> شركتنا</h2>
-        <p style="color:var(--ink);text-shadow:none;">{{ site.company }} متخصصة في تنظيم رحلات الحج والعمرة رسمياً، نساعدك على أداء مناسكك بأفضل صورة مع برنامج سير منظَّم ومرافقين معتمدين، منذ لحظة الخروج من مقر إقامتك حتى عودتك إليها. نخدم عملاءنا على مدار العام ونوفر لهم أقصى درجات الراحة والطمأنينة طوال الرحلة.</p>
+        <h2><span>عن</span> شركتنا</h2>
+        <p>{{ site.company }} متخصصة في تنظيم رحلات الحج والعمرة رسمياً، نساعدك على أداء مناسكك بأفضل صورة مع برنامج سير منظَّم ومرافقين معتمدين، منذ لحظة الخروج من مقر إقامتك حتى عودتك إليها. نخدم عملاءنا على مدار العام ونوفر لهم أقصى درجات الراحة والطمأنينة طوال الرحلة.</p>
       </div>
       <div class="trip-desc reveal-right">
-        <h2 style="color:var(--primary);margin:0 0 10px;">🗺 كيف ننظم برنامج السير؟</h2>
-        <p style="color:var(--ink);text-shadow:none;">نضع لكل رحلة برنامج سير تفصيلي ومرتب، يبدأ من تجمّع ضمن المجموعة وتحديد نقطة الخروج، ثم الوصول إلى الأراضي المقدسة، ثم أداء المناسك يومياً مع فريق إرشادي، وحتى العودة بسلامة إلى نقطة الانطلاق.</p>
-        <p style="color:var(--ink);text-shadow:none;">كل رحلة على الموقع تُعرض بترتيب أيامها كامل: مكان الخروج ← مدن الوصول ← أيام المشاعر ← العودة.</p>
+        <h2>🗺 كيف ننظم برنامج السير؟</h2>
+        <p>نضع لكل رحلة برنامج سير تفصيلي ومرتب، يبدأ من تجمّع ضمن المجموعة وتحديد نقطة الخروج، ثم الوصول إلى الأراضي المقدسة، ثم أداء المناسك يومياً مع فريق إرشادي، وحتى العودة بسلامة إلى نقطة الانطلاق.</p>
+        <p style="margin-top:8px;">كل رحلة على الموقع تُعرض بترتيب أيامها كامل: مكان الخروج ← مدن الوصول ← أيام المشاعر ← العودة.</p>
       </div>
     </div>
 
@@ -38,16 +39,23 @@
       <div class="stat-card reveal"><strong>4</strong><span>رحلات في السنة</span></div>
       <div class="stat-card reveal"><strong>100%</strong><span>ترخيص رسمي</span></div>
     </div>
+  </div>
+</section>
 
-    {% if site.phone or site.whatsapp %}
-      <div class="text-center mt-2 reveal">
-        <h2 class="cta-title" style="margin-bottom:14px;">تواصل معنا مباشرة</h2>
-        {% if site.phone %}<a class="btn" href="{{ phone_tel_href }}" style="margin-inline-end:10px;">📞 اتصل بنا</a>{% endif %}
+{% if site.phone or site.whatsapp %}
+  <section class="section section-dark">
+    <div class="container text-center reveal">
+      <h2 class="cta-title">تواصل معنا مباشرة</h2>
+      <p class="cta-sub">فريقنا جاهز للرد على استفساراتك وتأكيد بيانات حجزك على مدار اليوم.</p>
+      <div class="hero-ctas">
+        {% if site.phone %}
+          <a class="btn btn-gold btn-lg" href="{{ phone_tel_href }}">📞 اتصل بنا</a>
+        {% endif %}
         {% if site.whatsapp %}
-          <a class="btn btn-outline" href="{{ whatsapp_href }}" target="_blank" rel="noopener">💬 واتساب</a>
+          <a class="btn btn-outline-light btn-lg" href="{{ whatsapp_href }}" target="_blank" rel="noopener">💬 واتساب</a>
         {% endif %}
       </div>
-    {% endif %}
-  </div>
-</main>
+    </div>
+  </section>
+{% endif %}
 {% endblock %}
