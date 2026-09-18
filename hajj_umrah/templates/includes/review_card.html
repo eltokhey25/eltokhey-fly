@@ -1,19 +1,25 @@
 {% load static %}
 <article class="review-card reveal">
-  <span class="review-card-accent" aria-hidden="true"></span>
   <span class="review-card-quote" aria-hidden="true">”</span>
 
-  <div class="review-card-head">
-    {% if review.photo %}
-      <img class="review-avatar" src="{{ review.photo.url }}" alt="{{ review.name }}" loading="lazy">
-    {% else %}
-      <span class="review-avatar review-avatar-fallback" aria-hidden="true">{{ review.name|first }}</span>
-    {% endif %}
-  </div>
+  {% if review.photo %}
+    <img class="review-avatar" src="{{ review.photo.url }}" alt="{{ review.name }}" loading="lazy">
+  {% else %}
+    <span class="review-avatar review-avatar-fallback" aria-hidden="true">{{ review.name|first }}</span>
+  {% endif %}
+
+  <strong class="review-name">
+    {{ review.name }}
+    <span class="verified-badge" title="رأي مصادَق عليه" aria-label="رأي مصادَق عليه">
+      <svg width="7" height="7" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+    </span>
+  </strong>
+
+  <span class="review-country">{{ review.country_flag }} {{ review.country }}</span>
 
   <div class="review-stars" role="img" aria-label="التقييم {{ review.rating }} من 5">
     {% for i in "12345" %}
-      <svg class="rt-star{% if forloop.counter <= review.rating %} filled{% endif %}" viewBox="0 0 24 24" aria-hidden="true">
+      <svg class="rt-star{% if forloop.counter <= review.rating %} filled{% endif %}" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
         <path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
       </svg>
     {% endfor %}
@@ -21,17 +27,9 @@
 
   <p class="review-text">{{ review.text }}</p>
 
-  <div class="review-card-meta">
-    <strong class="review-name">
-      {{ review.name }}
-      <span class="verified-badge" title="رأي مصادَق عليه" aria-label="رأي مصادَق عليه">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
-      </span>
-    </strong>
-    <span class="review-country">{{ review.country_flag }} {{ review.country }}</span>
-    {% if review.trip %}
-      <span class="review-trip-pill">🕋 {{ review.trip.name }}</span>
-    {% endif %}
-    <span class="review-date">{{ review.approved_at|default:review.created_at|date:"Y-m-d" }}</span>
-  </div>
+  {% if review.trip %}
+    <span class="review-trip-pill">🕋 {{ review.trip.name }}</span>
+  {% endif %}
+
+  <span class="review-date">{{ review.approved_at|default:review.created_at|date:"Y-m-d" }}</span>
 </article>

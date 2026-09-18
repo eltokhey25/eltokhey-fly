@@ -135,7 +135,9 @@ EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 DEFAULT_FROM_EMAIL = os.environ.get(
     'DEFAULT_FROM_EMAIL', EMAIL_HOST_USER or 'noreply@localhost'
 )
-ADMIN_NOTIFICATION_EMAIL = os.environ.get('ADMIN_NOTIFICATION_EMAIL', '')
+ADMIN_NOTIFICATION_EMAIL = os.environ.get(
+    'ADMIN_NOTIFICATION_EMAIL', 'meltokhey39@gmail.com'
+)
 
 # Use SMTP when credentials are configured, otherwise fall back to the console
 # backend (prints emails to stdout) so local development and tests keep working.

@@ -14,21 +14,24 @@
 
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}{{ site.company }} — رحلات الحج والعمرة في مصر{% endblock %}</title>
-  <meta name=google-site-verification: google949f04ecbcd2e64b.html/>
-  <meta name="description" content="{% block meta_description %}{{ site.company }} — وكلاء رسميون لتنظيم رحلات الحج والعمرة في مصر، برنامج سير مفصّل، مرافقون معتمدون وإقامة قريبة من الحرمين الشريفين. احجز الآن.{% endblock %}">
+  <title>{% block title %}الطوخي للحج والعمرة | رحلات الحج والعمرة والزيارة{% endblock %}</title>
+  <meta name="description" content="{% block meta_description %}وكالة الطوخي للحج والعمرة — أفضل برامج ورحلات الحج والعمرة في مصر، إقامة متميزة وإشراف ديني معتمد.{% endblock %}">
+  <meta name="keywords" content="الطوخي للحج والعمرة, رحلات عمرة, رحلات حج, دسوق, كفر الشيخ, عمرة رمضان">
+  <meta name="robots" content="index, follow">
+  <meta name="google-site-verification" content="{% block google_verification %}INSERT_VERIFICATION_CODE_HERE{% endblock %}">
   <link rel="canonical" href="{% block canonical %}{{ request.scheme }}://{{ request.get_host }}{{ request.path }}{% endblock %}">
   <meta property="og:site_name" content="{{ site.company }}">
   <meta property="og:locale" content="ar_AR">
   <meta property="og:type" content="{% block og_type %}website{% endblock %}">
-  <meta property="og:title" content="{% block og_title %}{{ site.company }} — رحلات الحج والعمرة في مصر{% endblock %}">
-  <meta property="og:description" content="{% block og_description %}{{ site.company }} — وكلاء رسميون لتنظيم رحلات الحج والعمرة في مصر، برنامج سير مفصّل، مرافقون معتمدون وإقامة قريبة من الحرمين الشريفين. احجز الآن.{% endblock %}">
-  <meta property="og:url" content="{% block og_url %}{{ request.scheme }}://{{ request.get_host }}{{ request.path }}{% endblock %}">
+  <meta property="og:title" content="{% block og_title %}الطوخي للحج والعمرة{% endblock %}">
+  <meta property="og:description" content="{% block og_description %}وكالة الطوخي للحج والعمرة — برامج ورحلات الحج والعمرة.{% endblock %}">
+  <meta property="og:url" content="{% block og_url %}https://eltokhey.pythonanywhere.com/{% endblock %}">
   {% block og_image %}<meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{% static 'img/kaaba.jpg' %}">{% endblock %}
+  {% block structured_data %}{% endblock %}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'css/main.css' %}">
+  <link rel="stylesheet" href="{% static 'css/main.css' %}?v=2">
   <script src="{% static 'js/main.js' %}" defer></script>
   {% block extra_js %}{% endblock %}
 </head>

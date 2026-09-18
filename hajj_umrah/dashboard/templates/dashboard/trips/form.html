@@ -15,7 +15,7 @@
   {% endif %}
 </div>
 
-<form method="post" novalidate>
+<form method="post" enctype="multipart/form-data" novalidate>
   {% csrf_token %}
   {% if form.errors %}
     <div class="form-errors">يرجى مراجعة الحقول المحددة بالأسفل وتصحيح الأخطاء قبل الحفظ.</div>
