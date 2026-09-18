@@ -23,8 +23,8 @@
         {% endfor %}
       </select>
       <select class="input" name="stock" onchange="this.form.submit()">
-        <option value="">كل الحالات</option>
-        <option value="available" {% if filter_stock == 'available' %}selected{% endif %}>معروضة</option>
+        <option value="">الكل</option>
+        <option value="available" {% if filter_stock == 'available' %}selected{% endif %}>مفعّلة</option>
         <option value="hidden" {% if filter_stock == 'hidden' %}selected{% endif %}>مخفية</option>
         <option value="full" {% if filter_stock == 'full' %}selected{% endif %}>مكتملة</option>
       </select>
@@ -32,12 +32,16 @@
     </form>
   </div>
 
+  <div class="panel-body">
+    <p class="muted" style="margin:0;">🔃 استخدم الأسهم لترتيب ظهور الرحلات على الموقع — الرحلة الأولى تظهر أولاً.</p>
+  </div>
+
   <div class="panel-body-flush table-wrap">
     {% if trips %}
       <table class="table">
         <thead>
           <tr>
-            <th>الرحلة</th><th>النوع</th><th>الخروج</th><th>السعر</th><th>متبقي / سعة</th><th>الحالة</th><th></th>
+            <th>الرحلة</th><th>النوع</th><th>الخروج</th><th>السعر</th><th>متبقي / سعة</th><th>الحالة</th><th>الترتيب</th><th></th>
           </tr>
         </thead>
         <tbody>
@@ -59,8 +63,21 @@
                 {% elif trip.remaining == 0 %}
                   <span class="badge badge-red">مكتملة</span>
                 {% else %}
-                  <span class="badge badge-green">نشطة</span>
+                  <span class="badge badge-green">مفعّلة</span>
                 {% endif %}
+              </td>
+              <td>
+                <div class="order-actions">
+                  <span class="order-num" title="ترتيب الظهور">#{{ trip.order }}</span>
+                  <form method="post" action="{% url 'dashboard:trip_move_up' trip.pk %}">
+                    {% csrf_token %}
+                    <button class="icon-btn mini" type="submit" title="تحريك لأعلى" aria-label="تحريك «{{ trip.name }}» لأعلى">↑</button>
+                  </form>
+                  <form method="post" action="{% url 'dashboard:trip_move_down' trip.pk %}">
+                    {% csrf_token %}
+                    <button class="icon-btn mini" type="submit" title="تحريك لأسفل" aria-label="تحريك «{{ trip.name }}» لأسفل">↓</button>
+                  </form>
+                </div>
               </td>
               <td>
                 <div class="row-actions">

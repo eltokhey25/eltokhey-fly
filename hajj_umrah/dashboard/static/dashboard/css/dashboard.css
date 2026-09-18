@@ -314,6 +314,9 @@ button { font-family: var(--font); cursor: pointer; }
 .table td .muted { color: var(--muted); font-size: 0.82rem; }
 
 .row-actions { display: flex; gap: 6px; justify-content: flex-end; }
+.order-actions { display: flex; align-items: center; gap: 6px; }
+.order-actions form { display: inline-flex; }
+.order-num { font-size: 0.78rem; font-weight: 700; color: var(--muted); background: #eef2f6; border-radius: 6px; padding: 2px 8px; }
 
 /* ===== Badges ===== */
 .badge {

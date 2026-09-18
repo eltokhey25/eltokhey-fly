@@ -127,7 +127,7 @@ def trip_list(request):
         trips = trips.filter(remaining=0)
 
     context = {
-        'trips': trips.order_by('-is_active', 'departure'),
+        'trips': trips.order_by('order', '-created_at'),
         'q': query,
         'filter_type': ttype,
         'filter_stock': stock,
@@ -146,9 +146,11 @@ def trip_list(request):
 def trip_create(request):
     form = TripForm(request.POST or None, request.FILES or None)
     if request.method == 'POST' and form.is_valid():
-        form.instance.is_active = True
         trip = form.save()
-        messages.success(request, f'تمت إضافة الرحلة «{trip.name}» ونشرها فوراً.')
+        if trip.is_active:
+            messages.success(request, f'تمت إضافة الرحلة «{trip.name}» ونشرها على الموقع.')
+        else:
+            messages.success(request, f'تمت إضافة الرحلة «{trip.name}» وستظهر على الموقع بعد تفعيلها.')
         return redirect('dashboard:trip_edit', slug=trip.slug)
     context = {'form': form, 'title': 'إضافة رحلة جديدة', 'page': 'trips'}
     return render(request, 'dashboard/trips/form.html', context)
@@ -160,10 +162,49 @@ def trip_edit(request, slug):
     form = TripForm(request.POST or None, request.FILES or None, instance=trip)
     if request.method == 'POST' and form.is_valid():
         trip = form.save()
-        messages.success(request, 'تم حفظ تعديلات الرحلة ونشرها على الموقع.')
+        if trip.is_active:
+            messages.success(request, 'تم حفظ تعديلات الرحلة ونشرها على الموقع.')
+        else:
+            messages.success(request, 'تم حفظ تعديلات الرحلة، وهي الآن مخفية من الموقع.')
         return redirect('dashboard:trip_edit', slug=trip.slug)
     context = {'form': form, 'trip': trip, 'title': 'تعديل الرحلة', 'page': 'trips'}
     return render(request, 'dashboard/trips/form.html', context)
+
+
+def _move_trip(request, pk, up):
+    trip = get_object_or_404(Trip, pk=pk)
+    rows = list(Trip.objects.order_by('order', '-created_at', 'id'))
+    index = next((i for i, row in enumerate(rows) if row.pk == trip.pk), None)
+    if index is None:
+        return redirect('dashboard:trips')
+    target = index - 1 if up else index + 1
+    if target < 0 or target >= len(rows):
+        if up:
+            messages.info(request, f'«{trip.name}» في أول القائمة بالفعل.')
+        else:
+            messages.info(request, f'«{trip.name}» في آخر القائمة بالفعل.')
+        return redirect('dashboard:trips')
+    rows[index], rows[target] = rows[target], rows[index]
+    for i, row in enumerate(rows):
+        if row.order != i:
+            Trip.objects.filter(pk=row.pk).update(order=i)
+    if up:
+        messages.success(request, f'تم رفع «{trip.name}» للأمام.')
+    else:
+        messages.success(request, f'تم إرجاع «{trip.name}» للخلف.')
+    return redirect('dashboard:trips')
+
+
+@staff_required
+@require_POST
+def trip_move_up(request, pk):
+    return _move_trip(request, pk, up=True)
+
+
+@staff_required
+@require_POST
+def trip_move_down(request, pk):
+    return _move_trip(request, pk, up=False)
 
 
 @staff_required

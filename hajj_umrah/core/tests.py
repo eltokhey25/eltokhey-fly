@@ -449,3 +449,37 @@ class ReviewTests(TestCase):
         self.assertContains(resp, 'آراء عملائنا')
         self.assertContains(resp, 'أكثر من 3 عميل سعيد')
         self.assertNotContains(resp, 'شاهد كل الآراء')
+
+class TripPublicOrderingTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        SiteSettings.load()
+        Trip.objects.create(
+            name='الرحلة الأولى', slug='pord-1', trip_type='umrah', order=0, is_active=True
+        )
+        Trip.objects.create(
+            name='الرحلة الثانية', slug='pord-2', trip_type='umrah', order=1, is_active=True
+        )
+        Trip.objects.create(
+            name='الرحلة الثالثة', slug='pord-3', trip_type='umrah', order=2, is_active=True
+        )
+
+    def test_home_orders_trips_by_order_field(self):
+        resp = self.client.get(reverse('core:home'))
+        html = resp.content.decode()
+        self.assertLess(html.find('الرحلة الأولى'), html.find('الرحلة الثانية'))
+        self.assertLess(html.find('الرحلة الثانية'), html.find('الرحلة الثالثة'))
+
+    def test_trips_list_orders_trips_by_order_field(self):
+        resp = self.client.get(reverse('core:trips'))
+        html = resp.content.decode()
+        self.assertLess(html.find('الرحلة الأولى'), html.find('الرحلة الثانية'))
+        self.assertLess(html.find('الرحلة الثانية'), html.find('الرحلة الثالثة'))
+
+    def test_public_lists_respect_toggled_hidden_ordering(self):
+        Trip.objects.filter(slug='pord-2').update(is_active=False)
+        resp = self.client.get(reverse('core:home'))
+        html = resp.content.decode()
+        self.assertIn('الرحلة الأولى', html)
+        self.assertNotIn('الرحلة الثانية', html)
+        self.assertIn('الرحلة الثالثة', html)

@@ -83,6 +83,7 @@ class Trip(models.Model):
     capacity = models.PositiveIntegerField('الطاقة الاستيعابية', null=True, blank=True)
     remaining = models.PositiveIntegerField('الأماكن المتبقية', null=True, blank=True)
     is_active = models.BooleanField('معروضة على الموقع', default=True)
+    order = models.PositiveIntegerField('ترتيب الظهور', default=0, db_index=True)
     thumbnail = models.ImageField(
         'صورة الرحلة (الصورة المصغرة)',
         upload_to='trip_thumbnails/%Y/%m/',
@@ -96,7 +97,7 @@ class Trip(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['departure', 'name']
+        ordering = ['order', '-created_at']
         verbose_name = 'رحلة'
         verbose_name_plural = 'الرحلات'
 
