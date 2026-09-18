@@ -93,14 +93,6 @@
         {% endif %}
       </ul>
     </div>
-
-    <div class="trip-desc">
-      <h2 style="margin:0;">معلومات التواصل مع {{ site.company }}</h2>
-      <ul class="list-checks" style="margin-top:14px;">
-        {% if site.phone %}<li><a href="{{ phone_tel_href }}">📞 هاتف: {{ site.phone }}</a></li>{% endif %}
-        {% if site.whatsapp %}<li><a href="{{ whatsapp_href }}" target="_blank" rel="noopener">💬 واتساب: {{ site.whatsapp }}</a></li>{% endif %}
-      </ul>
-    </div>
   </div>
 
   <aside class="trip-aside reveal-right">
@@ -128,5 +120,15 @@
       {% endif %}
     </div>
   </aside>
+</div>
+
+<div class="container trip-contact">
+  <div class="trip-desc">
+    <h2 style="margin:0;">معلومات التواصل مع {{ site.company }}</h2>
+    <ul class="list-checks" style="margin-top:14px;">
+      {% if site.phone %}<li><a href="{{ phone_tel_href }}">📞 هاتف: {{ site.phone }}</a></li>{% endif %}
+      {% if site.whatsapp %}<li><a href="{{ whatsapp_href }}" target="_blank" rel="noopener">💬 واتساب: {{ site.whatsapp }}</a></li>{% endif %}
+    </ul>
+  </div>
 </div>
 {% endblock %}

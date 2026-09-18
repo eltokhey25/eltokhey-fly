@@ -1090,6 +1090,10 @@ body.error404 { --hero-img: url("../img/kaaba.jpg"); }
   align-items: start;
 }
 
+.trip-contact {
+  padding: 0 0 calc(120px + env(safe-area-inset-bottom));
+}
+
 .trip-hero {
   position: relative;
 }
@@ -2047,6 +2051,10 @@ body.menu-open .fab {
 @media (max-width: 768px) {
   .nav-toggle {
     display: grid;
+  }
+
+  .trip-contact {
+    padding-bottom: calc(170px + env(safe-area-inset-bottom));
   }
 
   .main-nav {
