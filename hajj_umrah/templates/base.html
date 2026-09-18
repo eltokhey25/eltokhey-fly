@@ -20,8 +20,6 @@
   <meta name="robots" content="index, follow">
   <meta name="google-site-verification" content="{% block google_verification %}INSERT_VERIFICATION_CODE_HERE{% endblock %}">
   <link rel="canonical" href="{% block canonical %}{{ request.scheme }}://{{ request.get_host }}{{ request.path }}{% endblock %}">
-  <link rel="icon" type="image/png" href="{% static 'img/logo-square.png' %}">
-  <link rel="apple-touch-icon" href="{% static 'img/logo-square.png' %}">
   <meta property="og:site_name" content="{{ site.company }}">
   <meta property="og:locale" content="ar_AR">
   <meta property="og:type" content="{% block og_type %}website{% endblock %}">
@@ -66,7 +64,8 @@
 
   <div class="container header-main">
     <a class="site-logo" href="{% url 'core:home' %}" aria-label="{{ site.company }} — الرئيسية">
-      <img src="{% static 'img/logo.png' %}" alt="{{ site.company }}" class="logo-img" onerror="this.style.display='none'">
+      <span class="logo-mark">🕋</span>
+      <span>{{ site.company }}</span>
     </a>
 
     <nav class="main-nav" id="main-nav" aria-label="القائمة الرئيسية">
@@ -106,7 +105,7 @@
 <footer class="site-footer">
   <div class="container footer-grid">
     <div>
-      <img src="{% static 'img/logo-vertical.png' %}" alt="{{ site.company }}" class="footer-logo" onerror="this.style.display='none'">
+      <h3>{{ site.company }}</h3>
       <p>نساعدك على أداء مناسك الحج والعمرة بأفضل صورة، مع برنامج سير منظَّم ومرافقين معتمدين، منذ لحظة الخروج من مقر إقامتك حتى عودتك إليها.</p>
     </div>
 
