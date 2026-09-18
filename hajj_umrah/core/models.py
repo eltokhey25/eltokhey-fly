@@ -1,5 +1,4 @@
 from io import BytesIO
-from pathlib import PurePosixPath
 from uuid import uuid4
 
 from django.conf import settings
@@ -7,6 +6,44 @@ from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from django.db import models
 from django.utils import timezone
+
+TRIP_THUMBNAIL_MAX = 1600
+REVIEW_PHOTO_MAX = 400
+JPEG_QUALITY = 85
+
+
+def _normalize_image(img_field, max_size, quality=JPEG_QUALITY):
+    """Re-encode an image field.
+
+    - Applies EXIF orientation rotation (ImageOps.exif_transpose) and strips metadata.
+    - Downscales proportionally to fit within max_size x max_size (no cropping,
+      never upscales).
+    - Saves as JPEG (quality=85) unless the source had transparency, in which case
+      it is kept as PNG.
+
+    Returns ``(new_name, ContentFile)`` or ``None`` when the file can't be read.
+    """
+    from PIL import Image, ImageOps
+
+    try:
+        with img_field.open('rb') as fh:
+            img = Image.open(fh)
+            img = ImageOps.exif_transpose(img)
+            has_alpha = img.mode in ('RGBA', 'LA') or (
+                img.mode == 'P' and 'transparency' in img.info
+            )
+            if max(img.size) > max_size:
+                img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
+            buf = BytesIO()
+            if has_alpha:
+                img.convert('RGBA').save(buf, 'PNG')
+                ext = '.png'
+            else:
+                img.convert('RGB').save(buf, 'JPEG', quality=quality, optimize=True)
+                ext = '.jpg'
+    except Exception:
+        return None
+    return f'{uuid4().hex}{ext}', ContentFile(buf.getvalue())
 
 
 class TripType(models.TextChoices):
@@ -65,6 +102,32 @@ class Trip(models.Model):
 
     def __str__(self):
         return self.name
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._original_thumbnail = self.thumbnail.name if self.thumbnail else None
+
+    def save(self, *args, **kwargs):
+        adding = self._state.adding
+        uploaded = self.thumbnail.name if self.thumbnail else None
+        thumb_changed = adding or uploaded != self._original_thumbnail
+        super().save(*args, **kwargs)
+        if thumb_changed and uploaded:
+            result = _normalize_image(self.thumbnail, TRIP_THUMBNAIL_MAX)
+            if result:
+                new_name, content = result
+                current_name = self.thumbnail.name
+                default_storage.delete(current_name)
+                self.thumbnail.save(new_name, content, save=False)
+                super().save(update_fields=['thumbnail'])
+        if (
+            not adding
+            and uploaded
+            and uploaded != self._original_thumbnail
+            and self._original_thumbnail
+        ):
+            default_storage.delete(self._original_thumbnail)
+        self._original_thumbnail = self.thumbnail.name if self.thumbnail else None
 
     @property
     def price_display(self):
@@ -258,37 +321,32 @@ class Review(models.Model):
     def country_flag(self):
         return COUNTRY_FLAGS.get(self.country, '')
 
-    def save(self, *args, **kwargs):
-        resize_photo = self.pk is None and bool(self.photo)
-        super().save(*args, **kwargs)
-        if resize_photo:
-            self._compress_photo()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._original_photo = self.photo.name if self.photo else None
 
-    def _compress_photo(self, limit=400, quality=85):
+    def save(self, *args, **kwargs):
+        adding = self._state.adding
+        uploaded = self.photo.name if self.photo else None
+        photo_changed = adding or uploaded != self._original_photo
+        super().save(*args, **kwargs)
+        if photo_changed and uploaded:
+            self._normalize_photo()
+        if not adding and photo_changed and self._original_photo:
+            default_storage.delete(self._original_photo)
+        self._original_photo = self.photo.name if self.photo else None
+
+    def _normalize_photo(self):
         if not self.photo:
             return
-        try:
-            from PIL import Image
-
-            current_name = self.photo.name
-            with self.photo.open('rb') as fh:
-                img = Image.open(fh)
-                img.thumbnail((limit, limit), Image.Resampling.LANCZOS)
-                if img.mode not in ('RGB', 'L'):
-                    img = img.convert('RGB')
-                buf = BytesIO()
-                ext = PurePosixPath(current_name).suffix.lower()
-                fmt = 'PNG' if ext == '.png' else 'JPEG'
-                img.save(buf, fmt, quality=quality)
-            ext_out = '.png' if fmt == 'PNG' else '.jpg'
-            new_name = f'{uuid4().hex}{ext_out}'
-            default_storage.delete(current_name)
-            self.photo.save(
-                new_name, ContentFile(buf.getvalue()), save=False
-            )
-            super().save(update_fields=['photo'])
-        except Exception:
-            default_storage.delete(current_name)
+        result = _normalize_image(self.photo, REVIEW_PHOTO_MAX)
+        if not result:
+            return
+        new_name, content = result
+        current_name = self.photo.name
+        default_storage.delete(current_name)
+        self.photo.save(new_name, content, save=False)
+        super().save(update_fields=['photo'])
 
 
 class SiteSettings(models.Model):

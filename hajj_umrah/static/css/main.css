@@ -894,27 +894,19 @@ body.error404 { --hero-img: url("../img/kaaba.jpg"); }
 
 .trip-card-media {
   position: relative;
-  height: 214px;
-  background: linear-gradient(135deg, var(--primary-100), var(--gray-100));
+  aspect-ratio: 3 / 2;
+  background: var(--gray-100);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   overflow: hidden;
 }
 
 .trip-card-media img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 450ms ease;
-}
-
-.trip-card:hover .trip-card-media img {
-  transform: scale(1.05);
-}
-
-.trip-card-media::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, transparent 55%, rgba(11, 19, 34, 0.5) 100%);
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  object-position: center;
 }
 
 .trip-card-media .noimg {
@@ -1096,6 +1088,35 @@ body.error404 { --hero-img: url("../img/kaaba.jpg"); }
   gap: var(--space-8);
   padding: var(--space-12) 0;
   align-items: start;
+}
+
+.trip-hero {
+  position: relative;
+}
+
+.trip-hero-img {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  background: var(--navy);
+  pointer-events: none;
+}
+
+.trip-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(180deg, rgba(11, 19, 34, 0.45) 0%, rgba(11, 19, 34, 0.3) 45%, rgba(11, 19, 34, 0.75) 100%);
+  pointer-events: none;
+}
+
+.trip-hero .container {
+  z-index: 2;
 }
 
 .trip-hero-badges {

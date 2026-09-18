@@ -21,7 +21,10 @@
 {% endblock %}
 
 {% block content %}
-<section class="hero hero-inner">
+<section class="hero hero-inner trip-hero">
+  {% if trip.thumbnail %}
+    <img class="trip-hero-img" src="{{ trip.thumbnail.url }}" alt="" aria-hidden="true" fetchpriority="high">
+  {% endif %}
   <div class="container reveal">
     <h1>{{ trip.name }}</h1>
     <span class="trip-type-badge badge-{{ trip.trip_type }}">{{ trip.get_trip_type_display }}</span>
