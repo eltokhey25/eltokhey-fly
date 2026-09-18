@@ -412,25 +412,10 @@ ol {
   position: sticky;
   top: 0;
   z-index: 100;
-  background: transparent;
+  background: #fff;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+  box-shadow: 0 2px 14px rgba(15, 23, 42, 0.08);
   transition: box-shadow var(--transition);
-}
-
-/* Glass effect lives on a ::before layer so the header element itself
-   never creates a containing block (filter/backdrop-filter) that would
-   trap the fixed-position mobile drawer. */
-.site-header.scrolled {
-  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.08);
-}
-
-.site-header.scrolled::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background: rgba(255, 255, 255, 0.92);
-  -webkit-backdrop-filter: blur(14px) saturate(1.2);
-  backdrop-filter: blur(14px) saturate(1.2);
 }
 
 .header-main {
@@ -445,11 +430,10 @@ ol {
   display: inline-flex;
   align-items: center;
   gap: var(--space-3);
-  color: #fff;
+  color: var(--ink);
   font-weight: 800;
   font-size: var(--fs-lg);
   line-height: 1.2;
-  text-shadow: 0 1px 8px rgba(15, 23, 42, 0.35);
   transition: color var(--transition);
 }
 
@@ -465,12 +449,6 @@ ol {
   font-size: 1.35rem;
   color: var(--gold-400);
   box-shadow: 0 8px 18px rgba(13, 148, 136, 0.4);
-  text-shadow: none;
-}
-
-.site-header.scrolled .site-logo {
-  color: var(--ink);
-  text-shadow: none;
 }
 
 .main-nav {
@@ -492,11 +470,10 @@ ol {
 .main-nav a {
   position: relative;
   display: inline-block;
-  color: #fff;
+  color: var(--ink);
   font-weight: 600;
   font-size: var(--fs-sm);
   padding: var(--space-2) var(--space-1);
-  text-shadow: 0 1px 8px rgba(15, 23, 42, 0.4);
   transition: color var(--transition);
 }
 
@@ -517,12 +494,7 @@ ol {
   transform: scaleX(1);
 }
 
-.site-header.scrolled .main-nav a {
-  color: var(--ink);
-  text-shadow: none;
-}
-
-.site-header.scrolled .main-nav a:hover {
+.main-nav a:hover {
   color: var(--primary-700);
 }
 
@@ -534,7 +506,7 @@ ol {
   display: none;
   background: none;
   border: 0;
-  color: #fff;
+  color: var(--ink);
   cursor: pointer;
   min-width: 44px;
   min-height: 44px;
@@ -551,10 +523,6 @@ ol {
   fill: none;
   stroke-width: 2;
   stroke-linecap: round;
-}
-
-.site-header.scrolled .nav-toggle {
-  color: var(--ink);
 }
 
 .nav-close {
@@ -2161,14 +2129,6 @@ body.menu-open .fab {
     border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: var(--radius-sm);
     cursor: pointer;
-  }
-
-  .site-header.scrolled .main-nav a {
-    color: #e2e8f0;
-  }
-
-  .site-header.scrolled .main-nav .nav-cta {
-    color: var(--navy);
   }
 
   .header-main {
