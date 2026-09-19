@@ -104,12 +104,12 @@
 
 <footer class="site-footer">
   <div class="container footer-grid">
-    <div>
+    <div class="reveal">
       <h3>{{ site.company }}</h3>
       <p>نساعدك على أداء مناسك الحج والعمرة بأفضل صورة، مع برنامج سير منظَّم ومرافقين معتمدين، منذ لحظة الخروج من مقر إقامتك حتى عودتك إليها.</p>
     </div>
 
-    <div>
+    <div class="reveal">
       <h3>روابط سريعة</h3>
       <ul>
         <li><a href="{% url 'core:home' %}">الرئيسية</a></li>
@@ -121,7 +121,7 @@
       </ul>
     </div>
 
-    <div>
+    <div class="reveal">
       <h3>بيانات التواصل</h3>
       <ul>
         {% if site.phone %}
@@ -159,7 +159,7 @@
       </ul>
     </div>
 
-    <div>
+    <div class="reveal">
       <h3>تابعنا</h3>
       <div class="footer-social">
         <a class="social-link" href="{{ site.facebook|default:'#' }}" target="_blank" rel="noopener" aria-label="صفحتنا على فيسبوك">

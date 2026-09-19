@@ -2,6 +2,7 @@
    1. Sticky header glass effect on scroll
    2. Mobile slide-in drawer with backdrop, Escape, body-scroll lock
    3. Scroll reveal (IntersectionObserver) with reduced-motion fallback
+   4. Number counters (stat cards) — count up once on scroll
 */
 
 (function () {
@@ -51,25 +52,66 @@
 	}
 
 	/* 3. Scroll reveal */
-	var els = document.querySelectorAll('.reveal, .reveal-left, .reveal-right');
+	var els = document.querySelectorAll('.reveal, .reveal-left, .reveal-right, .section');
 	if (!('IntersectionObserver' in window)) {
 		els.forEach(function (el) {
 			el.classList.add('visible');
 		});
 	} else {
+		var firstBatch = true;
 		var io = new IntersectionObserver(
 			function (entries) {
 				entries.forEach(function (entry) {
-					if (entry.isIntersecting) {
-						entry.target.classList.add('visible');
-						io.unobserve(entry.target);
+					if (!entry.isIntersecting) return;
+					var el = entry.target;
+					el.classList.add('visible');
+					if (firstBatch) {
+						el.style.willChange = 'auto';
+						el.style.transition = 'none';
+						requestAnimationFrame(function () { el.style.transition = ''; });
+					} else {
+						el.addEventListener('transitionend', function release(e) {
+							if (e.target === el && e.propertyName === 'opacity') {
+								el.style.willChange = 'auto';
+								el.removeEventListener('transitionend', release);
+							}
+						});
 					}
+					io.unobserve(el);
 				});
+				firstBatch = false;
 			},
 			{ threshold: 0, rootMargin: '0px 0px -36px 0px' }
 		);
 		els.forEach(function (el) {
 			io.observe(el);
 		});
+	}
+
+	/* 4. Number counters (count up once on scroll) */
+	var counters = document.querySelectorAll('.stat-card strong, [data-counter]');
+	if (counters.length && 'IntersectionObserver' in window) {
+		var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+		var cio = new IntersectionObserver(function (entries, obs) {
+			entries.forEach(function (entry) {
+				if (!entry.isIntersecting) return;
+				var el = entry.target;
+				var m = el.textContent.match(/([0-9]+)/);
+				if (!m) return obs.unobserve(el);
+				var end = parseInt(m[1], 10);
+				var pre = el.textContent.slice(0, m.index);
+				var suf = el.textContent.slice(m.index + m[0].length);
+				var t0 = null;
+				var step = function (ts) {
+					if (t0 === null) t0 = ts;
+					var p = Math.min((ts - t0) / 1500, 1);
+					el.textContent = pre + Math.round(end * (1 - Math.pow(1 - p, 3))) + suf;
+					if (p < 1) requestAnimationFrame(step);
+				};
+				requestAnimationFrame(reduced ? function () { el.textContent = pre + end + suf; } : step);
+				obs.unobserve(el);
+			});
+		}, { threshold: 0.4, rootMargin: '0px 0px -36px 0px' });
+		counters.forEach(function (el) { cio.observe(el); });
 	}
 })();
