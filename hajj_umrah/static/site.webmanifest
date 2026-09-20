@@ -2,7 +2,7 @@
   "name": "الطوخي فلاي",
   "short_name": "الطوخي",
   "icons": [
-    {"src": "/static/img/logo-square.png", "sizes": "512x512", "type": "image/png"}
+    {"src": "/static/img/favicon.png", "sizes": "512x512", "type": "image/png"}
   ],
   "theme_color": "#0f172a",
   "background_color": "#ffffff",
