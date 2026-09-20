@@ -20,9 +20,9 @@
   <meta name="author" content="الطوخي فلاي">
   <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large">
   <meta name="google-site-verification" content="{% block google_verification %}INSERT_VERIFICATION_CODE_HERE{% endblock %}">
-  <link rel="icon" type="image/svg+xml" href="{% static 'favicon.svg' %}">
-  <link rel="icon" type="image/png" href="{% static 'img/favicon.png' %}" sizes="any">
-  <link rel="apple-touch-icon" href="{% static 'img/favicon.png' %}">
+  <link rel="icon" type="image/png" sizes="512x512" href="{% static 'img/favicon.png' %}">
+  <link rel="icon" type="image/png" sizes="192x192" href="{% static 'img/favicon.png' %}">
+  <link rel="apple-touch-icon" sizes="180x180" href="{% static 'img/favicon.png' %}">
   <link rel="shortcut icon" href="{% static 'favicon.ico' %}">
   <link rel="manifest" href="{% static 'site.webmanifest' %}">
   <link rel="canonical" href="{% block canonical %}{{ request.scheme }}://{{ request.get_host }}{{ request.path }}{% endblock %}">
