@@ -1,15 +1,50 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}{{ site.company }} — رحلات الحج والعمرة في مصر | احجز حج وعمرة الآن{% endblock %}
+{% block title %}الطوخي فلاي | رحلات الحج والعمرة من مصر{% endblock %}
 
-{% block og_title %}{{ site.company }} — رحلات الحج والعمرة في مصر | احجز حج وعمرة الآن{% endblock %}
+{% block og_title %}الطوخي فلاي | رحلات الحج والعمرة من مصر{% endblock %}
 
-{% block meta_description %}وكلاء رسميون للحج والعمرة في مصر — رحلات حج وعمرة وعمرة رمضان ببرامج سير مفصلة، مرافقون معتمدون، سكن قريب من الحرمين، وأسعار مناسبة. احجز رحلتك الآن.{% endblock %}
+{% block meta_description %}الطوخي فلاي — وكلاء رسميون لتنظيم رحلات الحج والعمرة في مصر. برنامج سير مفصّل، مرافقون معتمدون، وإقامة قريبة من الحرمين الشريفين. احجز الآن.{% endblock %}
 
-{% block og_description %}وكلاء رسميون للحج والعمرة في مصر — رحلات حج وعمرة وعمرة رمضان ببرامج سير مفصلة، مرافقون معتمدون، سكن قريب من الحرمين، وأسعار مناسبة. احجز رحلتك الآن.{% endblock %}
+{% block og_description %}الطوخي فلاي — وكلاء رسميون لتنظيم رحلات الحج والعمرة في مصر. برنامج سير مفصّل، مرافقون معتمدون، وإقامة قريبة من الحرمين الشريفين. احجز الآن.{% endblock %}
 
 {% block body_class %}home{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TravelAgency",
+  "name": "الطوخي فلاي",
+  "alternateName": "الطوخي للحج والعمرة",
+  "url": "https://eltokhey.pythonanywhere.com",
+  "logo": "https://eltokhey.pythonanywhere.com/static/img/logo-square.png",
+  "description": "وكلاء رسميون لتنظيم رحلات الحج والعمرة في مصر. برنامج سير مفصّل، مرافقون معتمدون، وإقامة قريبة من الحرمين الشريفين.",
+  "telephone": "+201095454012",
+  "email": "ahmedeltokhey55@gmail.com",
+  "address": {
+    "@type": "PostalAddress",
+    "addressCountry": "EG",
+    "addressLocality": "كفر الشيخ"
+  },
+  "areaServed": {
+    "@type": "Country",
+    "name": "Egypt"
+  },
+  "sameAs": [
+    "https://www.facebook.com/Eltokhey25"
+  ],
+  "priceRange": "$$",
+  "openingHoursSpecification": {
+    "@type": "OpeningHoursSpecification",
+    "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
+    "opens": "09:00",
+    "closes": "22:00"
+  }
+}
+</script>
+{% endblock %}
 
 {% block extra_js %}
   <script src="{% static 'js/filter.js' %}" defer></script>
@@ -21,7 +56,7 @@
     <section class="hero">
       <div class="container reveal">
         <span class="hero-eyebrow">🕋 وكالة متخصصة للحج والعمرة</span>
-        <h1>{{ site.hero_title }}</h1>
+        <h1>{{ site.company }} — {{ site.hero_title }}</h1>
         <p>{{ site.hero_sub }}</p>
         <div class="hero-ctas">
           <a class="btn btn-gold btn-lg" href="#trips">{{ site.hero_btn|default:"تصفح الرحلات" }}</a>
@@ -46,6 +81,19 @@
         <div class="trust-item">
           <span class="trust-icon">🛏</span>
           <div><strong>إقامة قريبة من الحرم</strong><span>سكن مريح قريب من الحرمين الشريفين</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section-tint" aria-label="عن الطوخي فلاي للحج والعمرة">
+      <div class="container">
+        <div class="section-head reveal">
+          <span class="eyebrow"><span class="eyebrow-dot"></span> عن الطوخي فلاي</span>
+          <h2>رحلات الحج والعمرة من مصر</h2>
+        </div>
+        <div class="seo-content reveal">
+          <p>الطوخي فلاي للحج والعمرة وكالة رسمية في مصر متخصصة في تنظيم <strong>رحلات الحج من مصر</strong> و <strong>رحلات العمرة من مصر</strong> بتراخيص معتمدة، مع برنامج سير مفصّل يرافقك منذ الخروج من مقر إقامتك حتى عودتك إليها.</p>
+          <p>نقدّم عروض <strong>عمرة رمضان 2026</strong> بالإضافة إلى رحلات تبدأ من مصر في جميع مواسم السنة، مع مرافقين معتمدين وإقامة قريبة من الحرمين الشريفين لخدمة ضيوف بيت الله الحرام في كل مكان.</p>
         </div>
       </div>
     </section>

@@ -795,6 +795,23 @@ body.error404 { --hero-img: url("../img/kaaba.jpg"); }
   line-height: var(--leading-loose);
 }
 
+.seo-content {
+  max-width: 820px;
+  margin: 0 auto;
+}
+
+.seo-content p {
+  color: var(--muted);
+  font-size: var(--fs-md);
+  line-height: var(--leading-loose);
+  margin-bottom: var(--space-4);
+  text-align: center;
+}
+
+.seo-content p:last-child {
+  margin-bottom: 0;
+}
+
 /* ==========================================================================
    Filters
    ========================================================================== */

@@ -14,19 +14,28 @@
 
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}الطوخي للحج والعمرة | رحلات الحج والعمرة والزيارة{% endblock %}</title>
-  <meta name="description" content="{% block meta_description %}وكالة الطوخي للحج والعمرة — أفضل برامج ورحلات الحج والعمرة في مصر، إقامة متميزة وإشراف ديني معتمد.{% endblock %}">
-  <meta name="keywords" content="الطوخي للحج والعمرة, رحلات عمرة, رحلات حج, دسوق, كفر الشيخ, عمرة رمضان">
-  <meta name="robots" content="index, follow">
+  <title>{% block title %}الطوخي فلاي | رحلات الحج والعمرة من مصر{% endblock %}</title>
+  <meta name="description" content="{% block meta_description %}الطوخي فلاي — وكلاء رسميون لتنظيم رحلات الحج والعمرة في مصر. برنامج سير مفصّل، مرافقون معتمدون، وإقامة قريبة من الحرمين الشريفين. احجز الآن.{% endblock %}">
+  <meta name="keywords" content="الطوخي فلاي, الطوخي للحج والعمرة, حج من مصر, عمرة من مصر, عمرة رمضان, رحلات حج, رحلات عمرة, حج 2026, عمرة 2026">
+  <meta name="author" content="الطوخي فلاي">
+  <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large">
   <meta name="google-site-verification" content="{% block google_verification %}INSERT_VERIFICATION_CODE_HERE{% endblock %}">
+  <link rel="icon" type="image/png" href="{% static 'img/logo-square.png' %}" sizes="any">
+  <link rel="apple-touch-icon" href="{% static 'img/logo-square.png' %}">
+  <link rel="shortcut icon" href="{% static 'img/logo-square.png' %}">
+  <link rel="manifest" href="{% static 'site.webmanifest' %}">
   <link rel="canonical" href="{% block canonical %}{{ request.scheme }}://{{ request.get_host }}{{ request.path }}{% endblock %}">
-  <meta property="og:site_name" content="{{ site.company }}">
+  <meta property="og:site_name" content="الطوخي فلاي">
   <meta property="og:locale" content="ar_AR">
   <meta property="og:type" content="{% block og_type %}website{% endblock %}">
-  <meta property="og:title" content="{% block og_title %}الطوخي للحج والعمرة{% endblock %}">
-  <meta property="og:description" content="{% block og_description %}وكالة الطوخي للحج والعمرة — برامج ورحلات الحج والعمرة.{% endblock %}">
+  <meta property="og:title" content="{% block og_title %}الطوخي فلاي | رحلات الحج والعمرة من مصر{% endblock %}">
+  <meta property="og:description" content="{% block og_description %}الطوخي فلاي — وكلاء رسميون لتنظيم رحلات الحج والعمرة في مصر. برنامج سير مفصّل، مرافقون معتمدون، وإقامة قريبة من الحرمين الشريفين. احجز الآن.{% endblock %}">
   <meta property="og:url" content="{% block og_url %}https://eltokhey.pythonanywhere.com/{% endblock %}">
-  {% block og_image %}<meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{% static 'img/kaaba.jpg' %}">{% endblock %}
+  <meta property="og:image" content="https://eltokhey.pythonanywhere.com{% static 'img/logo-square.png' %}">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="الطوخي فلاي | رحلات الحج والعمرة من مصر">
+  <meta name="twitter:description" content="الطوخي فلاي — وكلاء رسميون لتنظيم رحلات الحج والعمرة في مصر. برنامج سير مفصّل، مرافقون معتمدون، وإقامة قريبة من الحرمين الشريفين. احجز الآن.">
+  <meta name="twitter:image" content="https://eltokhey.pythonanywhere.com{% static 'img/logo-square.png' %}">
   {% block structured_data %}{% endblock %}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

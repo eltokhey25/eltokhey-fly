@@ -351,13 +351,13 @@ class Review(models.Model):
 
 
 class SiteSettings(models.Model):
-    company = models.CharField('اسم الشركة', max_length=255, default='رحلات الحج والعمرة')
+    company = models.CharField('اسم الشركة', max_length=255, default='الطوخي فلاي')
     phone = models.CharField('رقم الهاتف', max_length=50, blank=True)
     whatsapp = models.CharField('رقم الواتساب بصيغة دولية', max_length=50, blank=True)
     email = models.EmailField('البريد الإلكتروني', blank=True)
     address = models.CharField('العنوان', max_length=500, blank=True)
     facebook = models.URLField('رابط صفحة فيسبوك', blank=True)
-    hero_title = models.CharField(max_length=255, default='رحلات الحج والعمرة لكل مواسم السنة')
+    hero_title = models.CharField(max_length=255, default='رحلتك الروحانية تبدأ من هنا')
     hero_sub = models.TextField(
         default='تعرّف على رحلاتنا بتفاصيل كاملة لأيام السير، من نقطة الخروج حتى العودة، واحجز مكانك في المواعيد المتاحة.'
     )

@@ -50,7 +50,7 @@ def seed_data(apps, schema_editor):
     settings, _ = SiteSettings.objects.get_or_create(
         pk=1,
         defaults={
-            'company': 'الطوخي للحج والعمره',
+            'company': 'الطوخي فلاي',
             'phone': '01095454012',
             'whatsapp': '+201095454012',
             'email': 'ahmedeltokhey55@gmail.com',
