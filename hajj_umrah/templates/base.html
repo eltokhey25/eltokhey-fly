@@ -15,7 +15,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}الطوخي للحج والعمرة | رحلات الحج والعمرة من مصر{% endblock %}</title>
-  <meta name="description" content="{% block meta_description %}الطوخي للحج والعمرة — وكلاء رسميون لتنظيم رحلات الحج والعمرة في مصر. برنامج سير مفصّل، مرافقون معتمدون، وإقامة قريبة من الحرمين الشريفين. احجز الآن.{% endblock %}">
+  <meta name="description" content="{% block meta_description %}الطوخي للحج والعمرة — وكلاء رسميون لتنظيم رحلات الحج والعمرة من مصر. برامج سير مفصلة، مرافقون معتمدون، وإقامة قريبة من الحرمين.{% endblock %}">
   <meta name="keywords" content="الطوخي فلاي, الطوخي للحج والعمرة, حج من مصر, عمرة من مصر, عمرة رمضان, رحلات حج, رحلات عمرة, حج 2026, عمرة 2026">
   <meta name="author" content="الطوخي للحج والعمرة">
   <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large">
@@ -34,13 +34,90 @@
   <meta property="og:locale" content="ar_AR">
   <meta property="og:type" content="{% block og_type %}website{% endblock %}">
   <meta property="og:title" content="{% block og_title %}الطوخي للحج والعمرة | رحلات الحج والعمرة من مصر{% endblock %}">
-  <meta property="og:description" content="{% block og_description %}الطوخي للحج والعمرة — وكلاء رسميون لتنظيم رحلات الحج والعمرة في مصر. برنامج سير مفصّل، مرافقون معتمدون، وإقامة قريبة من الحرمين الشريفين. احجز الآن.{% endblock %}">
-  <meta property="og:url" content="{% block og_url %}https://eltokhey.pythonanywhere.com/{% endblock %}">
-  <meta property="og:image" content="https://eltokhey.pythonanywhere.com{% static 'img/logo-square.png' %}">
+  <meta property="og:description" content="{% block og_description %}الطوخي للحج والعمرة — وكلاء رسميون لتنظيم رحلات الحج والعمرة من مصر. برامج سير مفصلة، مرافقون معتمدون، وإقامة قريبة من الحرمين.{% endblock %}">
+  <meta property="og:url" content="{% block og_url %}{{ request.scheme }}://{{ request.get_host }}{{ request.path }}{% endblock %}">
+  <meta property="og:image" content="{% block og_image %}https://eltokhey.pythonanywhere.com{% static 'img/logo-square.png' %}{% endblock %}">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="الطوخي للحج والعمرة | رحلات الحج والعمرة من مصر">
-  <meta name="twitter:description" content="الطوخي للحج والعمرة — وكلاء رسميون لتنظيم رحلات الحج والعمرة في مصر. برنامج سير مفصّل، مرافقون معتمدون، وإقامة قريبة من الحرمين الشريفين. احجز الآن.">
+  <meta name="twitter:title" content="{% block twitter_title %}الطوخي للحج والعمرة | رحلات الحج والعمرة من مصر{% endblock %}">
+  <meta name="twitter:description" content="{% block twitter_description %}الطوخي للحج والعمرة — وكلاء رسميون لتنظيم رحلات الحج والعمرة من مصر. برامج سير مفصلة، مرافقون معتمدون، وإقامة قريبة من الحرمين.{% endblock %}">
   <meta name="twitter:image" content="https://eltokhey.pythonanywhere.com{% static 'img/logo-square.png' %}">
+  {% block website_schema %}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "الطوخي للحج والعمرة",
+    "alternateName": "Al-Tokhey Hajj & Umrah",
+    "url": "https://eltokhey.pythonanywhere.com",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": "https://eltokhey.pythonanywhere.com/trips/?q={search_term_string}",
+      "query-input": "required name=search_term_string"
+    }
+  }
+  </script>
+  {% endblock %}
+  {% block navigation_schema %}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SiteNavigationElement",
+        "position": 1,
+        "name": "الرئيسية",
+        "url": "https://eltokhey.pythonanywhere.com/"
+      },
+      {
+        "@type": "SiteNavigationElement",
+        "position": 2,
+        "name": "رحلاتنا",
+        "url": "https://eltokhey.pythonanywhere.com/trips/"
+      },
+      {
+        "@type": "SiteNavigationElement",
+        "position": 3,
+        "name": "آراء عملائنا",
+        "url": "https://eltokhey.pythonanywhere.com/reviews/"
+      },
+      {
+        "@type": "SiteNavigationElement",
+        "position": 4,
+        "name": "من نحن",
+        "url": "https://eltokhey.pythonanywhere.com/about/"
+      },
+      {
+        "@type": "SiteNavigationElement",
+        "position": 5,
+        "name": "احجز الآن",
+        "url": "https://eltokhey.pythonanywhere.com/booking/"
+      },
+      {
+        "@type": "SiteNavigationElement",
+        "position": 6,
+        "name": "تتبع حجزك",
+        "url": "https://eltokhey.pythonanywhere.com/track/"
+      }
+    ]
+  }
+  </script>
+  {% endblock %}
+  {% block breadcrumb_schema %}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "الرئيسية",
+        "item": "https://eltokhey.pythonanywhere.com/"
+      }
+    ]
+  }
+  </script>
+  {% endblock %}
   {% block structured_data %}{% endblock %}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -130,7 +207,7 @@
         <li><a href="{% url 'core:trips' %}">رحلاتنا</a></li>
         <li><a href="{% url 'core:reviews' %}">آراء عملائنا</a></li>
         <li><a href="{% url 'core:track_booking' %}">تتبع حجزك</a></li>
-        <li><a href="{% url 'core:booking' %}">تواصل / حجز</a></li>
+        <li><a href="{% url 'core:booking' %}">احجز الآن</a></li>
         <li><a href="{% url 'core:about' %}">من نحن</a></li>
       </ul>
     </div>
@@ -142,7 +219,7 @@
           <li>
             <a href="{{ phone_tel_href }}">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z"/></svg>
-              {{ site.phone }}
+              <span>اتصل بنا: {{ site.phone }}</span>
             </a>
           </li>
         {% endif %}

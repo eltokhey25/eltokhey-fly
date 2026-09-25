@@ -1,12 +1,39 @@
 {% extends 'base.html' %}
 
-{% block title %}تواصل وحجز رحلات الحج والعمرة — {{ site.company }}{% endblock %}
+{% block title %}احجز رحلتك | الطوخي للحج والعمرة{% endblock %}
 
-{% block og_title %}تواصل وحجز رحلات الحج والعمرة — {{ site.company }}{% endblock %}
+{% block og_title %}احجز رحلتك | الطوخي للحج والعمرة{% endblock %}
 
-{% block meta_description %}احجز رحلتك للحج أو العمرة الآن عبر موقع {{ site.company }} أو اتصل بنا مباشرة. فريقنا جاهز للرد على استفساراتك وتأكيد بيانات حجزك على مدار اليوم.{% endblock %}
+{% block meta_description %}احجز رحلتك للحج أو العمرة مع الطوخي للحج والعمرة. أرسل بياناتك وسيتواصل معك فريقنا لتأكيد الحجز.{% endblock %}
 
-{% block og_description %}احجز رحلتك للحج أو العمرة الآن عبر موقع {{ site.company }} أو اتصل بنا مباشرة. فريقنا جاهز للرد على استفساراتك وتأكيد بيانات حجزك على مدار اليوم.{% endblock %}
+{% block og_description %}احجز رحلتك للحج أو العمرة مع الطوخي للحج والعمرة. أرسل بياناتك وسيتواصل معك فريقنا لتأكيد الحجز.{% endblock %}
+
+{% block twitter_title %}احجز رحلتك | الطوخي للحج والعمرة{% endblock %}
+
+{% block twitter_description %}احجز رحلتك للحج أو العمرة مع الطوخي للحج والعمرة. أرسل بياناتك وسيتواصل معك فريقنا لتأكيد الحجز.{% endblock %}
+
+{% block breadcrumb_schema %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "الرئيسية",
+      "item": "https://eltokhey.pythonanywhere.com/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "احجز الآن",
+      "item": "https://eltokhey.pythonanywhere.com/booking/"
+    }
+  ]
+}
+</script>
+{% endblock %}
 
 {% block body_class %}page-template-template-booking{% endblock %}
 

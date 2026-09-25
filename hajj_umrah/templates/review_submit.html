@@ -1,7 +1,46 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}اكتب رأيك — {{ site.company }}{% endblock %}
+{% block title %}اكتب رأيك | الطوخي للحج والعمرة{% endblock %}
+
+{% block og_title %}اكتب رأيك | الطوخي للحج والعمرة{% endblock %}
+
+{% block meta_description %}شارك تجربتك مع الطوخي للحج والعمرة وساعد المسافرين على اختيار الرحلة المناسبة.{% endblock %}
+
+{% block og_description %}شارك تجربتك مع الطوخي للحج والعمرة وساعد المسافرين على اختيار الرحلة المناسبة.{% endblock %}
+
+{% block twitter_title %}اكتب رأيك | الطوخي للحج والعمرة{% endblock %}
+
+{% block twitter_description %}شارك تجربتك مع الطوخي للحج والعمرة وساعد المسافرين على اختيار الرحلة المناسبة.{% endblock %}
+
+{% block breadcrumb_schema %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "الرئيسية",
+      "item": "https://eltokhey.pythonanywhere.com/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "آراء عملائنا",
+      "item": "https://eltokhey.pythonanywhere.com/reviews/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "اكتب رأيك",
+      "item": "https://eltokhey.pythonanywhere.com/reviews/submit/"
+    }
+  ]
+}
+</script>
+{% endblock %}
 
 {% block body_class %}review-submit-page{% endblock %}
 

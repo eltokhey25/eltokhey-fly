@@ -1,10 +1,39 @@
 {% extends 'base.html' %}
 
-{% block title %}تتبع حجزك — {{ site.company }}{% endblock %}
+{% block title %}تتبع حجزك | الطوخي للحج والعمرة{% endblock %}
 
-{% block og_title %}تتبع حجزك — {{ site.company }}{% endblock %}
+{% block og_title %}تتبع حجزك | الطوخي للحج والعمرة{% endblock %}
 
-{% block meta_description %}تابع حالة حجزك لرحلات الحج والعمرة عبر رقم الحجز أو رقم هاتفك، واعرف ما إذا كان قيد المراجعة أو مؤكداً أو مرفوضاً.{% endblock %}
+{% block meta_description %}تابع حالة حجزك في الطوخي للحج والعمرة برقم الحجز أو الهاتف، واعرف آخر تحديث لطلبك.{% endblock %}
+
+{% block og_description %}تابع حالة حجزك في الطوخي للحج والعمرة برقم الحجز أو الهاتف، واعرف آخر تحديث لطلبك.{% endblock %}
+
+{% block twitter_title %}تتبع حجزك | الطوخي للحج والعمرة{% endblock %}
+
+{% block twitter_description %}تابع حالة حجزك في الطوخي للحج والعمرة برقم الحجز أو الهاتف، واعرف آخر تحديث لطلبك.{% endblock %}
+
+{% block breadcrumb_schema %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "الرئيسية",
+      "item": "https://eltokhey.pythonanywhere.com/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "تتبع حجزك",
+      "item": "https://eltokhey.pythonanywhere.com/track/"
+    }
+  ]
+}
+</script>
+{% endblock %}
 
 {% block body_class %}page-track-booking{% endblock %}
 

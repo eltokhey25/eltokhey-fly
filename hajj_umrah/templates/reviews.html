@@ -1,13 +1,40 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}آراء عملائنا — {{ site.company }}{% endblock %}
+{% block title %}آراء عملائنا | الطوخي للحج والعمرة{% endblock %}
 
-{% block og_title %}آراء عملائنا — {{ site.company }}{% endblock %}
+{% block og_title %}آراء عملائنا | الطوخي للحج والعمرة{% endblock %}
 
-{% block meta_description %}اقرأ آراء وتجارب عملائنا الحقيقية بعد رحلات الحج والعمرة مع {{ site.company }}، وشاركنا تجربتك الخاصة.{% endblock %}
+{% block meta_description %}اقرأ آراء عملائنا الحقيقية حول رحلات الحج والعمرة مع الطوخي للحج والعمرة، وشاركنا تجربتك.{% endblock %}
 
-{% block og_description %}اقرأ آراء وتجارب عملائنا الحقيقية بعد رحلات الحج والعمرة، وشاركنا تجربتك الخاصة.{% endblock %}
+{% block og_description %}اقرأ آراء عملائنا الحقيقية حول رحلات الحج والعمرة مع الطوخي للحج والعمرة، وشاركنا تجربتك.{% endblock %}
+
+{% block twitter_title %}آراء عملائنا | الطوخي للحج والعمرة{% endblock %}
+
+{% block twitter_description %}اقرأ آراء عملائنا الحقيقية حول رحلات الحج والعمرة مع الطوخي للحج والعمرة، وشاركنا تجربتك.{% endblock %}
+
+{% block breadcrumb_schema %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "الرئيسية",
+      "item": "https://eltokhey.pythonanywhere.com/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "آراء عملائنا",
+      "item": "https://eltokhey.pythonanywhere.com/reviews/"
+    }
+  ]
+}
+</script>
+{% endblock %}
 
 {% block body_class %}reviews-page{% endblock %}
 

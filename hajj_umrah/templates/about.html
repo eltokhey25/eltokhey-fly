@@ -1,12 +1,39 @@
 {% extends 'base.html' %}
 
-{% block title %}من نحن — {{ site.company }}{% endblock %}
+{% block title %}من نحن | الطوخي للحج والعمرة{% endblock %}
 
-{% block og_title %}من نحن — {{ site.company }}{% endblock %}
+{% block og_title %}من نحن | الطوخي للحج والعمرة{% endblock %}
 
-{% block meta_description %}تعرف على {{ site.company }}، شركة مصرية متخصصة في تنظيم رحلات الحج والعمرة رسمياً منذ أكثر من 15 عاماً، بمرافقين معتمدين وبرامج سير منظّمة وتغطية كاملة من الخروج حتى العودة.{% endblock %}
+{% block meta_description %}تعرّف على الطوخي للحج والعمرة — خبرة سنوات في تنظيم رحلات الحج والعمرة بإحترافية.{% endblock %}
 
-{% block og_description %}تعرف على {{ site.company }}، شركة مصرية متخصصة في تنظيم رحلات الحج والعمرة رسمياً منذ أكثر من 15 عاماً، بمرافقين معتمدين وبرامج سير منظّمة وتغطية كاملة من الخروج حتى العودة.{% endblock %}
+{% block og_description %}تعرّف على الطوخي للحج والعمرة — خبرة سنوات في تنظيم رحلات الحج والعمرة بإحترافية.{% endblock %}
+
+{% block twitter_title %}من نحن | الطوخي للحج والعمرة{% endblock %}
+
+{% block twitter_description %}تعرّف على الطوخي للحج والعمرة — خبرة سنوات في تنظيم رحلات الحج والعمرة بإحترافية.{% endblock %}
+
+{% block breadcrumb_schema %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "الرئيسية",
+      "item": "https://eltokhey.pythonanywhere.com/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "من نحن",
+      "item": "https://eltokhey.pythonanywhere.com/about/"
+    }
+  ]
+}
+</script>
+{% endblock %}
 
 {% block body_class %}page-template-template-about{% endblock %}
 
@@ -31,6 +58,11 @@
         <p>نضع لكل رحلة برنامج سير تفصيلي ومرتب، يبدأ من تجمّع ضمن المجموعة وتحديد نقطة الخروج، ثم الوصول إلى الأراضي المقدسة، ثم أداء المناسك يومياً مع فريق إرشادي، وحتى العودة بسلامة إلى نقطة الانطلاق.</p>
         <p style="margin-top:8px;">كل رحلة على الموقع تُعرض بترتيب أيامها كامل: مكان الخروج ← مدن الوصول ← أيام المشاعر ← العودة.</p>
       </div>
+    </div>
+
+    <div class="hero-ctas reveal">
+      <a class="btn btn-gold" href="{% url 'core:trips' %}">تصفح رحلاتنا</a>
+      <a class="btn btn-outline" href="{% url 'core:booking' %}">احجز رحلتك</a>
     </div>
 
     <div class="stats-grid">

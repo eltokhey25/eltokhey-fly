@@ -1,13 +1,40 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}رحلات الحج والعمرة — {{ site.company }}{% endblock %}
+{% block title %}رحلات الحج والعمرة | الطوخي للحج والعمرة{% endblock %}
 
-{% block og_title %}رحلات الحج والعمرة — {{ site.company }}{% endblock %}
+{% block og_title %}رحلات الحج والعمرة | الطوخي للحج والعمرة{% endblock %}
 
-{% block meta_description %}تصفح جميع رحلات الحج والعمرة المتاحة في مصر: حج، عمرة، وعمرة رمضان — بالمواعيد والأسعار وبرامج السير المفصلة. احجز مكانك الآن.{% endblock %}
+{% block meta_description %}تصفح جميع رحلات الحج والعمرة المتاحة من مصر. أسعار وتفاصيل كاملة لكل رحلة.{% endblock %}
 
-{% block og_description %}تصفح جميع رحلات الحج والعمرة المتاحة في مصر: حج، عمرة، وعمرة رمضان — بالمواعيد والأسعار وبرامج السير المفصلة. احجز مكانك الآن.{% endblock %}
+{% block og_description %}تصفح جميع رحلات الحج والعمرة المتاحة من مصر. أسعار وتفاصيل كاملة لكل رحلة.{% endblock %}
+
+{% block twitter_title %}رحلات الحج والعمرة | الطوخي للحج والعمرة{% endblock %}
+
+{% block twitter_description %}تصفح جميع رحلات الحج والعمرة المتاحة من مصر. أسعار وتفاصيل كاملة لكل رحلة.{% endblock %}
+
+{% block breadcrumb_schema %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "الرئيسية",
+      "item": "https://eltokhey.pythonanywhere.com/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "الرحلات",
+      "item": "https://eltokhey.pythonanywhere.com/trips/"
+    }
+  ]
+}
+</script>
+{% endblock %}
 
 {% block body_class %}post-type-archive-trip{% endblock %}
 
@@ -26,6 +53,15 @@
 
 <section class="section section-alt">
   <div class="container">
+    <form class="trip-search contact-form" method="get" role="search">
+      <label for="trip-search">ابحث عن رحلة</label>
+      <div class="row2">
+        <input id="trip-search" type="search" name="q" value="{{ trip_search_query }}" placeholder="اكتب اسم الرحلة أو نوعها">
+        <button class="btn btn-gold" type="submit">بحث</button>
+      </div>
+      {% if trip_search_query %}<a href="{% url 'core:trips' %}">مسح البحث</a>{% endif %}
+    </form>
+
     <div class="trip-filters reveal" id="trip-filters">
       <button class="filter-btn active" data-filter="all">كل الرحلات</button>
       {% for ttype in trip_types %}

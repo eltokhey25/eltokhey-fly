@@ -2,17 +2,50 @@
 {% load static %}
 {% load humanize %}
 
-{% block title %}{{ trip.name }} — {{ site.company }}{% endblock %}
+{% block title %}رحلة {{ trip.name }} | الطوخي للحج والعمرة{% endblock %}
 
-{% block og_title %}{{ trip.name }} — {{ site.company }}{% endblock %}
+{% block og_title %}رحلة {{ trip.name }} | الطوخي للحج والعمرة{% endblock %}
 
-{% block meta_description %}{% if trip.description %}{{ trip.description|truncatechars:160 }}{% else %}تفاصيل رحلة {{ trip.name }} مع {{ site.company }}: موعد الخروج، برنامج السير، السعر، وتشمل الأسعار. احجز مكانك الآن.{% endif %}{% endblock %}
+{% block meta_description %}{% if trip.description %}{{ trip.description|striptags|truncatechars:155 }}{% else %}تفاصيل رحلة {{ trip.name }}: المواعيد والسعر وبرنامج السير والمصاريف. احجز رحلتك مع الطوخي للحج والعمرة.{% endif %}{% endblock %}
 
-{% block og_description %}{% if trip.description %}{{ trip.description|truncatechars:160 }}{% else %}تفاصيل رحلة {{ trip.name }} مع {{ site.company }}: موعد الخروج، برنامج السير، السعر، وتشمل الأسعار. احجز مكانك الآن.{% endif %}{% endblock %}
+{% block og_description %}{% if trip.description %}{{ trip.description|striptags|truncatechars:155 }}{% else %}تفاصيل رحلة {{ trip.name }}: المواعيد والسعر وبرنامج السير والمصاريف. احجز رحلتك مع الطوخي للحج والعمرة.{% endif %}{% endblock %}
+
+{% block twitter_title %}رحلة {{ trip.name }} | الطوخي للحج والعمرة{% endblock %}
+
+{% block twitter_description %}{% if trip.description %}{{ trip.description|striptags|truncatechars:155 }}{% else %}تفاصيل رحلة {{ trip.name }}: المواعيد والسعر وبرنامج السير والمصاريف. احجز رحلتك مع الطوخي للحج والعمرة.{% endif %}{% endblock %}
 
 {% block og_type %}article{% endblock %}
 
-{% block og_image %}{% if trip.thumbnail %}<meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{{ trip.thumbnail.url }}">{% endif %}{% endblock %}
+{% block og_image %}{% if trip.thumbnail %}{{ request.scheme }}://{{ request.get_host }}{{ trip.thumbnail.url }}{% else %}https://eltokhey.pythonanywhere.com{% static 'img/logo-square.png' %}{% endif %}{% endblock %}
+
+{% block breadcrumb_schema %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "الرئيسية",
+      "item": "https://eltokhey.pythonanywhere.com/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "الرحلات",
+      "item": "https://eltokhey.pythonanywhere.com/trips/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "{{ trip.name|escapejs }}",
+      "item": "https://eltokhey.pythonanywhere.com{% url 'core:trip_detail' trip.slug %}"
+    }
+  ]
+}
+</script>
+{% endblock %}
 
 {% block body_class %}single-trip{% endblock %}
 
@@ -121,6 +154,27 @@
     </div>
   </aside>
 </div>
+
+<section class="section section-alt" aria-label="رحلات أخرى">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow"><span class="eyebrow-dot"></span> اختيارات أخرى</span>
+      <h2>رحلات أخرى قد تعجبك</h2>
+    </div>
+    {% if related_trips %}
+      <div class="trip-grid">
+        {% for related_trip in related_trips %}
+          {% include 'includes/trip_card.html' with trip=related_trip %}
+        {% endfor %}
+      </div>
+    {% else %}
+      <p>تصفح جميع الرحلات المتاحة للعثور على البرنامج المناسب لرحلتك القادمة.</p>
+    {% endif %}
+    <div class="hero-ctas">
+      <a class="btn btn-outline" href="{% url 'core:trips' %}">عرض جميع الرحلات</a>
+    </div>
+  </div>
+</section>
 
 <div class="container trip-contact">
   <div class="trip-desc">

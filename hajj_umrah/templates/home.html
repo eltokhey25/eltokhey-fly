@@ -5,9 +5,13 @@
 
 {% block og_title %}الطوخي للحج والعمرة | رحلات الحج والعمرة من مصر{% endblock %}
 
-{% block meta_description %}الطوخي للحج والعمرة — وكلاء رسميون لتنظيم رحلات الحج والعمرة في مصر. برنامج سير مفصّل، مرافقون معتمدون، وإقامة قريبة من الحرمين الشريفين. احجز الآن.{% endblock %}
+{% block meta_description %}الطوخي للحج والعمرة — وكلاء رسميون لتنظيم رحلات الحج والعمرة من مصر. برامج سير مفصلة، مرافقون معتمدون، وإقامة قريبة من الحرمين.{% endblock %}
 
-{% block og_description %}الطوخي للحج والعمرة — وكلاء رسميون لتنظيم رحلات الحج والعمرة في مصر. برنامج سير مفصّل، مرافقون معتمدون، وإقامة قريبة من الحرمين الشريفين. احجز الآن.{% endblock %}
+{% block og_description %}الطوخي للحج والعمرة — وكلاء رسميون لتنظيم رحلات الحج والعمرة من مصر. برامج سير مفصلة، مرافقون معتمدون، وإقامة قريبة من الحرمين.{% endblock %}
+
+{% block twitter_title %}الطوخي للحج والعمرة | رحلات الحج والعمرة من مصر{% endblock %}
+
+{% block twitter_description %}الطوخي للحج والعمرة — وكلاء رسميون لتنظيم رحلات الحج والعمرة من مصر. برامج سير مفصلة، مرافقون معتمدون، وإقامة قريبة من الحرمين.{% endblock %}
 
 {% block body_class %}home{% endblock %}
 
@@ -198,4 +202,45 @@
     </section>
   {% endif %}
 {% endfor %}
+
+<section class="section section-alt" aria-label="روابط الموقع">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow"><span class="eyebrow-dot"></span> تنقّل بسهولة</span>
+      <h2>كل ما تحتاجه من الطوخي للحج والعمرة</h2>
+    </div>
+    <div class="feature-grid reveal">
+      <a class="feature-card" href="{% url 'core:home' %}">
+        <span class="feature-icon" aria-hidden="true">01</span>
+        <h3>الرئيسية</h3>
+        <p>العودة إلى بداية رحلتك معنا.</p>
+      </a>
+      <a class="feature-card" href="{% url 'core:trips' %}">
+        <span class="feature-icon" aria-hidden="true">02</span>
+        <h3>رحلاتنا</h3>
+        <p>تصفح جميع رحلات الحج والعمرة المتاحة.</p>
+      </a>
+      <a class="feature-card" href="{% url 'core:reviews' %}">
+        <span class="feature-icon" aria-hidden="true">03</span>
+        <h3>آراء عملائنا</h3>
+        <p>اقرأ تجارب ضيوفنا وشارك رأيك.</p>
+      </a>
+      <a class="feature-card" href="{% url 'core:about' %}">
+        <span class="feature-icon" aria-hidden="true">04</span>
+        <h3>من نحن</h3>
+        <p>تعرّف على خبرة الطوخي للحج والعمرة.</p>
+      </a>
+      <a class="feature-card" href="{% url 'core:booking' %}">
+        <span class="feature-icon" aria-hidden="true">05</span>
+        <h3>احجز الآن</h3>
+        <p>أرسل طلب حجزك وتواصل مع فريقنا.</p>
+      </a>
+      <a class="feature-card" href="{% url 'core:track_booking' %}">
+        <span class="feature-icon" aria-hidden="true">06</span>
+        <h3>تتبع حجزك</h3>
+        <p>تابع حالة طلبك برقم الحجز أو الهاتف.</p>
+      </a>
+    </div>
+  </div>
+</section>
 {% endblock %}

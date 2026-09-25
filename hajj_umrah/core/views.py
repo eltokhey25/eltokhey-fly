@@ -7,6 +7,7 @@ from django.conf import settings
 from django.core.mail import send_mail
 from django.core.paginator import Paginator
 from django.contrib import messages
+from django.db.models import Q
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.response import TemplateResponse
@@ -92,8 +93,16 @@ def review_submit(request):
 
 
 def trips_list(request):
+    query = (request.GET.get('q') or '').strip()
     trips = Trip.objects.filter(is_active=True)
-    context = {'trips': trips}
+    if query:
+        trips = trips.filter(
+            Q(name__icontains=query) | Q(description__icontains=query)
+        )
+    context = {
+        'trips': trips,
+        'trip_search_query': query,
+    }
     return render(request, 'trips.html', context)
 
 
@@ -102,6 +111,7 @@ def trip_detail(request, slug):
     settings = SiteSettings.load()
     context = {
         'trip': trip,
+        'related_trips': Trip.objects.filter(is_active=True).exclude(pk=trip.pk)[:3],
         'wa_trip_href': _wa_trip_href(settings.whatsapp, trip.name),
     }
     return render(request, 'trip_detail.html', context)
