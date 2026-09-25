@@ -1,12 +1,13 @@
 from datetime import timedelta
 import logging
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model, logout
 from django.contrib.auth.views import LoginView, LogoutView
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q, Sum
-from django.http import HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -47,6 +48,19 @@ SECTION_LABELS = {
 
 def permission_denied(request, exception=None):
     return render(request, 'dashboard/403.html', status=403)
+
+
+def service_worker(request):
+    sw_path = settings.BASE_DIR / 'static' / 'dashboard-sw.js'
+    body = sw_path.read_text(encoding='utf-8') if sw_path.exists() else ''
+    response = HttpResponse(body, content_type='application/javascript')
+    response['Service-Worker-Allowed'] = '/dashboard/'
+    response['Cache-Control'] = 'no-cache'
+    return response
+
+
+def offline(request):
+    return render(request, 'dashboard/offline.html')
 
 
 @staff_required

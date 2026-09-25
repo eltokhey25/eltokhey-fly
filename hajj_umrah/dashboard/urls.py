@@ -8,6 +8,8 @@ urlpatterns = [
     path('', views.overview, name='overview'),
     path('login/', views.DashboardLoginView.as_view(), name='login'),
     path('logout/', views.dashboard_logout, name='logout'),
+    path('sw.js', views.service_worker, name='service_worker'),
+    path('offline/', views.offline, name='offline'),
 
     path('trips/', views.trip_list, name='trips'),
     path('trips/add/', views.trip_create, name='trip_add'),

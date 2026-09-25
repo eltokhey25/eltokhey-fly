@@ -685,6 +685,116 @@ input[type="checkbox"].switch-input:checked::before { transform: translateX(-19p
   .stat-card { padding: 14px 16px; }
 }
 
+/* ===== PWA install prompt ===== */
+.dash-pwa-prompt {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 1200;
+  padding: 0 16px 16px;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+.dash-pwa-prompt[hidden] { display: none; }
+.dash-pwa-prompt .pwa-prompt-inner {
+  pointer-events: auto;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 520px;
+  width: 100%;
+  background: #ffffff;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 14px 16px;
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.18);
+}
+.pwa-prompt-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+.pwa-prompt-title {
+  flex: 1;
+  margin: 0;
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.pwa-prompt-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+  margin: 0;
+}
+.pwa-prompt-btn {
+  background: var(--sidebar);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 8px 18px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.pwa-prompt-btn:hover { background: var(--sidebar-2); }
+.pwa-prompt-later {
+  background: transparent;
+  color: #64748b;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 7px 14px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.pwa-prompt-later:hover { background: #f1f5f9; }
+.pwa-prompt-close {
+  position: absolute;
+  top: -10px;
+  inset-inline-end: -6px;
+  background: #e2e8f0;
+  color: #475569;
+  border: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+}
+.pwa-prompt-help {
+  display: none;
+  position: absolute;
+  inset-inline: 12px;
+  bottom: calc(100% + 10px);
+  background: var(--sidebar);
+  color: #e2e8f0;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.7;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.3);
+}
+
+@media (max-width: 520px) {
+  .dash-pwa-prompt .pwa-prompt-inner {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .pwa-prompt-title { flex: 1 1 calc(100% - 60px); }
+  .pwa-prompt-actions { flex: 1 1 100%; }
+  .pwa-prompt-actions .pwa-prompt-btn,
+  .pwa-prompt-actions .pwa-prompt-later { flex: 1; }
+}
+
 /* scrollbars */
 .dash-sidebar::-webkit-scrollbar, .table-wrap::-webkit-scrollbar { width: 8px; height: 8px; }
 .dash-sidebar::-webkit-scrollbar-thumb, .table-wrap::-webkit-scrollbar-thumb { background: #34495e; border-radius: 50px; }

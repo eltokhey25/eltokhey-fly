@@ -1,11 +1,11 @@
 {
-  "name": "الطوخي للحج والعمرة — الإدارة",
-  "short_name": "الإدارة",
+  "name": "الطوخي للحج والعمرة - الإدارة",
+  "short_name": "الطوخي - إدارة",
   "start_url": "/dashboard/",
   "scope": "/dashboard/",
   "display": "standalone",
   "theme_color": "#0f172a",
-  "background_color": "#ffffff",
+  "background_color": "#f8fafc",
   "dir": "rtl",
   "lang": "ar",
   "icons": [

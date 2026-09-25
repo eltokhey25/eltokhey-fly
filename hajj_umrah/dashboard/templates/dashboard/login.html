@@ -5,6 +5,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>دخول المشرف — لوحة التحكم</title>
+  <link rel="manifest" href="{% static 'dashboard-manifest.json' %}">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="الطوخي - الإدارة">
+  <link rel="apple-touch-icon" href="{% static 'dashboard/icon-192.png' %}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'dashboard/css/dashboard.css' %}">
@@ -52,5 +58,14 @@
     <div class="login-foot"><a href="{% url 'core:home' %}">العودة إلى الموقع الرئيسي</a></div>
   </div>
 </div>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('{% url 'dashboard:service_worker' %}', {scope: '/dashboard/'}).catch(function (err) {
+      console.error('Dashboard Service Worker registration failed:', err);
+    });
+  });
+}
+</script>
 </body>
 </html>

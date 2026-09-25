@@ -5,11 +5,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}{% endblock %} — لوحة التحكم</title>
-  <link rel="manifest" href="{% static 'dashboard/manifest.json' %}">
+  <link rel="manifest" href="{% static 'dashboard-manifest.json' %}">
   <meta name="theme-color" content="#0f172a">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="الطوخي للحج والعمرة — الإدارة">
+  <meta name="apple-mobile-web-app-title" content="الطوخي - الإدارة">
   <link rel="apple-touch-icon" href="{% static 'dashboard/icon-192.png' %}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -17,6 +17,18 @@
   {% block extra_css %}{% endblock %}
 </head>
 <body>
+<div class="dash-pwa-prompt" id="dash-pwa-prompt" hidden>
+  <div class="pwa-prompt-inner">
+    <button type="button" class="pwa-prompt-close" data-action="later" aria-label="إغلاق">✕</button>
+    <img class="pwa-prompt-icon" src="{% static 'dashboard/icon-192.png' %}" alt="">
+    <p class="pwa-prompt-title">📱 نزّل تطبيق الإدارة على موبايلك للوصول السريع</p>
+    <p class="pwa-prompt-actions">
+      <button type="button" class="pwa-prompt-btn" data-action="install">تنزيل</button>
+      <button type="button" class="pwa-prompt-later" data-action="later">لاحقاً</button>
+    </p>
+    <p class="pwa-prompt-help" id="dash-pwa-help">على آيفون/آيباد: افتح قائمة المشاركة (Safari) ثم اختار «إضافة إلى الشاشة الرئيسية».</p>
+  </div>
+</div>
 <div class="dash">
   <aside class="dash-sidebar" id="dash-sidebar">
     <div class="sidebar-brand">
@@ -97,11 +109,68 @@
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function () {
-    navigator.serviceWorker.register('{% url 'core:service_worker' %}').catch(function (err) {
-      console.error('Service Worker registration failed:', err);
+    navigator.serviceWorker.register('{% url 'dashboard:service_worker' %}', {scope: '/dashboard/'}).catch(function (err) {
+      console.error('Dashboard Service Worker registration failed:', err);
     });
   });
 }
+</script>
+<script>
+/* Install prompt — shows once, only when the dashboard app isn't installed. */
+(function () {
+  'use strict';
+  var LS_KEY = 'eltokhey_dash_pwa_dismissed';
+  var deferredPrompt = null;
+
+  var isStandalone =
+    window.matchMedia('(display-mode: standalone)').matches ||
+    (window.navigator && window.navigator.standalone === true);
+
+  if (isStandalone) return;
+  if (localStorage.getItem(LS_KEY)) return;
+
+  window.addEventListener('beforeinstallprompt', function (e) {
+    e.preventDefault();
+    deferredPrompt = e;
+  });
+
+  var banner = document.getElementById('dash-pwa-prompt');
+
+  function dismiss() {
+    if (banner) banner.hidden = true;
+    localStorage.setItem(LS_KEY, '1');
+  }
+
+  function install() {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      deferredPrompt.userChoice.then(function () {
+        localStorage.setItem(LS_KEY, '1');
+        dismiss();
+      });
+      return;
+    }
+    var help = document.getElementById('dash-pwa-help');
+    if (help) help.style.display = 'block';
+  }
+
+  function build() {
+    if (!banner) return;
+    banner.hidden = false;
+    banner.addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-action]');
+      if (!btn) return;
+      if (btn.getAttribute('data-action') === 'install') install();
+      else dismiss();
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () { setTimeout(build, 2000); });
+  } else {
+    setTimeout(build, 2000);
+  }
+})();
 </script>
 </body>
 </html>
