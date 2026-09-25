@@ -4,7 +4,7 @@ from django.db import migrations
 def update_brand(apps, schema_editor):
     SiteSettings = apps.get_model('core', 'SiteSettings')
     SiteSettings.objects.filter(pk=1).update(
-        company='الطوخي فلاي',
+        company='الطوخي للحج والعمرة',
         hero_title='رحلتك الروحانية تبدأ من هنا',
     )
 

@@ -7,7 +7,7 @@ from django.conf import settings
 from django.core.mail import send_mail
 from django.core.paginator import Paginator
 from django.contrib import messages
-from django.http import Http404
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.response import TemplateResponse
 from django.utils import timezone
@@ -247,6 +247,19 @@ def track_booking(request):
 
 def not_found(request, exception=None):
     return render(request, '404.html', status=404)
+
+
+def service_worker(request):
+    sw_path = settings.BASE_DIR / 'static' / 'sw.js'
+    body = sw_path.read_text(encoding='utf-8') if sw_path.exists() else ''
+    response = HttpResponse(body, content_type='application/javascript')
+    response['Service-Worker-Allowed'] = '/'
+    response['Cache-Control'] = 'no-cache'
+    return response
+
+
+def offline(request):
+    return render(request, 'offline.html')
 
 
 def robots_txt(request):

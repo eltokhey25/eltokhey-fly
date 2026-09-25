@@ -1,11 +1,15 @@
 {
-  "name": "الطوخي فلاي",
+  "name": "الطوخي للحج والعمرة",
   "short_name": "الطوخي",
-  "icons": [
-    {"src": "/static/img/favicon.png", "sizes": "192x192", "type": "image/png"},
-    {"src": "/static/img/favicon.png", "sizes": "512x512", "type": "image/png"}
-  ],
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
   "theme_color": "#0f172a",
   "background_color": "#ffffff",
-  "display": "standalone"
+  "dir": "rtl",
+  "lang": "ar",
+  "icons": [
+    {"src": "/static/img/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+    {"src": "/static/img/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+  ]
 }

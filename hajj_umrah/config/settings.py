@@ -114,6 +114,13 @@ STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 
+# Serve PWA manifests with the right content type. WhiteNoise keeps its own
+# media-type map (rather than Python's mimetypes), so register here.
+WHITENOISE_MIMETYPES = {
+    '.webmanifest': 'application/manifest+json',
+    '.json': 'application/json',
+}
+
 STORAGES = {
     'default': {
         'BACKEND': 'django.core.files.storage.FileSystemStorage',
@@ -133,7 +140,7 @@ EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'true').lower() in {'1', 'true',
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 DEFAULT_FROM_EMAIL = os.environ.get(
-    'DEFAULT_FROM_EMAIL', 'الطوخي فلاي <ahmedeltokhey55@gmail.com>'
+    'DEFAULT_FROM_EMAIL', 'الطوخي للحج والعمرة <ahmedeltokhey55@gmail.com>'
 )
 ADMIN_NOTIFICATION_EMAIL = os.environ.get(
     'ADMIN_NOTIFICATION_EMAIL', 'meltokhey39@gmail.com'

@@ -1,0 +1,105 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#0f172a">
+  <title>مفيش اتصال — الطوخي للحج والعمرة</title>
+  <link rel="icon" type="image/png" href="{% static 'img/favicon.png' %}">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Cairo', sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .offline-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 20px;
+      padding: 48px 32px;
+      max-width: 400px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+    }
+    .offline-logo {
+      width: 88px;
+      height: 88px;
+      border-radius: 20px;
+      margin: 0 auto 20px;
+      display: block;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+    .offline-title {
+      font-size: 24px;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 10px;
+    }
+    .offline-sub {
+      color: #94a3b8;
+      font-size: 15px;
+      line-height: 1.8;
+      margin-bottom: 28px;
+    }
+    .offline-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .btn-retry {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #f59e0b;
+      color: #0f172a;
+      border: none;
+      border-radius: 12px;
+      padding: 12px 26px;
+      font-family: 'Cairo', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-retry:hover { background: #fbbf24; }
+    .btn-home {
+      display: inline-flex;
+      align-items: center;
+      text-decoration: none;
+      color: #e2e8f0;
+      border: 1px solid #475569;
+      border-radius: 12px;
+      padding: 12px 22px;
+      font-family: 'Cairo', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+    .btn-home:hover { background: #334155; }
+  </style>
+</head>
+<body>
+  <main class="offline-card">
+    <img class="offline-logo" src="{% static 'img/favicon.png' %}" alt="الطوخي للحج والعمرة">
+    <h1 class="offline-title">مفيش اتصال بالإنترنت</h1>
+    <p class="offline-sub">يبدو أنك غير متصل بالشبكة حالياً. تحقق من اتصالك وحاول مرة أخرى.</p>
+    <div class="offline-actions">
+      <button type="button" class="btn-retry" onclick="window.location.reload()">
+        <span aria-hidden="true">🔄</span> أعد المحاولة
+      </button>
+      <a class="btn-home" href="/">الصفحة الرئيسية</a>
+    </div>
+  </main>
+</body>
+</html>

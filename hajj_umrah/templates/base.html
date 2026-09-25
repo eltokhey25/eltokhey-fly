@@ -14,10 +14,10 @@
 
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}الطوخي فلاي | رحلات الحج والعمرة من مصر{% endblock %}</title>
-  <meta name="description" content="{% block meta_description %}الطوخي فلاي — وكلاء رسميون لتنظيم رحلات الحج والعمرة في مصر. برنامج سير مفصّل، مرافقون معتمدون، وإقامة قريبة من الحرمين الشريفين. احجز الآن.{% endblock %}">
+  <title>{% block title %}الطوخي للحج والعمرة | رحلات الحج والعمرة من مصر{% endblock %}</title>
+  <meta name="description" content="{% block meta_description %}الطوخي للحج والعمرة — وكلاء رسميون لتنظيم رحلات الحج والعمرة في مصر. برنامج سير مفصّل، مرافقون معتمدون، وإقامة قريبة من الحرمين الشريفين. احجز الآن.{% endblock %}">
   <meta name="keywords" content="الطوخي فلاي, الطوخي للحج والعمرة, حج من مصر, عمرة من مصر, عمرة رمضان, رحلات حج, رحلات عمرة, حج 2026, عمرة 2026">
-  <meta name="author" content="الطوخي فلاي">
+  <meta name="author" content="الطوخي للحج والعمرة">
   <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large">
   <meta name="google-site-verification" content="{% block google_verification %}INSERT_VERIFICATION_CODE_HERE{% endblock %}">
   <link rel="icon" type="image/png" sizes="512x512" href="{% static 'img/favicon.png' %}">
@@ -25,23 +25,27 @@
   <link rel="apple-touch-icon" sizes="180x180" href="{% static 'img/favicon.png' %}">
   <link rel="shortcut icon" href="{% static 'favicon.ico' %}">
   <link rel="manifest" href="{% static 'site.webmanifest' %}">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="الطوخي للحج والعمرة">
   <link rel="canonical" href="{% block canonical %}{{ request.scheme }}://{{ request.get_host }}{{ request.path }}{% endblock %}">
-  <meta property="og:site_name" content="الطوخي فلاي">
+  <meta property="og:site_name" content="الطوخي للحج والعمرة">
   <meta property="og:locale" content="ar_AR">
   <meta property="og:type" content="{% block og_type %}website{% endblock %}">
-  <meta property="og:title" content="{% block og_title %}الطوخي فلاي | رحلات الحج والعمرة من مصر{% endblock %}">
-  <meta property="og:description" content="{% block og_description %}الطوخي فلاي — وكلاء رسميون لتنظيم رحلات الحج والعمرة في مصر. برنامج سير مفصّل، مرافقون معتمدون، وإقامة قريبة من الحرمين الشريفين. احجز الآن.{% endblock %}">
+  <meta property="og:title" content="{% block og_title %}الطوخي للحج والعمرة | رحلات الحج والعمرة من مصر{% endblock %}">
+  <meta property="og:description" content="{% block og_description %}الطوخي للحج والعمرة — وكلاء رسميون لتنظيم رحلات الحج والعمرة في مصر. برنامج سير مفصّل، مرافقون معتمدون، وإقامة قريبة من الحرمين الشريفين. احجز الآن.{% endblock %}">
   <meta property="og:url" content="{% block og_url %}https://eltokhey.pythonanywhere.com/{% endblock %}">
   <meta property="og:image" content="https://eltokhey.pythonanywhere.com{% static 'img/logo-square.png' %}">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="الطوخي فلاي | رحلات الحج والعمرة من مصر">
-  <meta name="twitter:description" content="الطوخي فلاي — وكلاء رسميون لتنظيم رحلات الحج والعمرة في مصر. برنامج سير مفصّل، مرافقون معتمدون، وإقامة قريبة من الحرمين الشريفين. احجز الآن.">
+  <meta name="twitter:title" content="الطوخي للحج والعمرة | رحلات الحج والعمرة من مصر">
+  <meta name="twitter:description" content="الطوخي للحج والعمرة — وكلاء رسميون لتنظيم رحلات الحج والعمرة في مصر. برنامج سير مفصّل، مرافقون معتمدون، وإقامة قريبة من الحرمين الشريفين. احجز الآن.">
   <meta name="twitter:image" content="https://eltokhey.pythonanywhere.com{% static 'img/logo-square.png' %}">
   {% block structured_data %}{% endblock %}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'css/main.css' %}?v=2">
+  <link rel="stylesheet" href="{% static 'css/main.css' %}?v=3">
   <script src="{% static 'js/main.js' %}" defer></script>
   {% block extra_js %}{% endblock %}
 </head>
@@ -211,5 +215,16 @@
   </script>
   <script src="{% static 'dashboard/js/inline.js' %}" defer></script>
 {% endif %}
+
+<script src="{% static 'js/pwa.js' %}" defer></script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('{% url 'core:service_worker' %}').catch(function (err) {
+      console.error('Service Worker registration failed:', err);
+    });
+  });
+}
+</script>
 </body>
 </html>

@@ -5,6 +5,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}{% endblock %} — لوحة التحكم</title>
+  <link rel="manifest" href="{% static 'dashboard/manifest.json' %}">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="الطوخي للحج والعمرة — الإدارة">
+  <link rel="apple-touch-icon" href="{% static 'dashboard/icon-192.png' %}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'dashboard/css/dashboard.css' %}">
@@ -17,7 +23,7 @@
       <span class="brand-mark">🕋</span>
       <div>
         <span class="brand-name">إدارة الموقع</span>
-        <span class="brand-tag">الطوخي فلاي</span>
+        <span class="brand-tag">الطوخي للحج والعمرة</span>
       </div>
       <button class="sidebar-close" id="sidebar-close" aria-label="إغلاق القائمة">✕</button>
     </div>
@@ -88,5 +94,14 @@
 </div>
 <script src="{% static 'dashboard/js/dashboard.js' %}"></script>
 {% block extra_js %}{% endblock %}
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('{% url 'core:service_worker' %}').catch(function (err) {
+      console.error('Service Worker registration failed:', err);
+    });
+  });
+}
+</script>
 </body>
 </html>

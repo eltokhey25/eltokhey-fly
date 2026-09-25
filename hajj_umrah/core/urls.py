@@ -13,4 +13,6 @@ urlpatterns = [
     path('reviews/', views.reviews_list, name='reviews'),
     path('reviews/submit/', views.review_submit, name='review_submit'),
     path('track/', views.track_booking, name='track_booking'),
+    path('offline/', views.offline, name='offline'),
+    path('sw.js', views.service_worker, name='service_worker'),
 ]

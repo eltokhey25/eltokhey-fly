@@ -351,7 +351,7 @@ class Review(models.Model):
 
 
 class SiteSettings(models.Model):
-    company = models.CharField('اسم الشركة', max_length=255, default='الطوخي فلاي')
+    company = models.CharField('اسم الشركة', max_length=255, default='الطوخي للحج والعمرة')
     phone = models.CharField('رقم الهاتف', max_length=50, blank=True)
     whatsapp = models.CharField('رقم الواتساب بصيغة دولية', max_length=50, blank=True)
     email = models.EmailField('البريد الإلكتروني', blank=True)
