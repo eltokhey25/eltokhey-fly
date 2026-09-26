@@ -6,7 +6,7 @@
 */
 'use strict';
 
-var VERSION = 'v1.1.0';
+var VERSION = 'v1.2.0';
 var CACHE_ASSETS = 'eltokhey-assets-' + VERSION;
 var CACHE_PAGES = 'eltokhey-pages-' + VERSION;
 var CACHE_PREFIX = 'eltokhey-';

@@ -28,6 +28,13 @@
   function messagesEl() { return el('chatbot-messages'); }
 
   function csrfToken() {
+    /* The meta tag is on every page (base.html and /chat/); only the booking
+       and review forms carry the hidden input. Reading only the input meant an
+       empty token on every page without a form, and Django answers that with
+       403 plus an HTML body -- which the widget reported as "تعذر الاتصال",
+       sending visitors to debug their own connection. */
+    var meta = document.querySelector('meta[name=csrf-token]');
+    if (meta && meta.content) return meta.content;
     var input = document.querySelector('[name=csrfmiddlewaretoken]');
     return input ? input.value : '';
   }
@@ -43,12 +50,97 @@
 
   /* Any of these mean the model could not answer, so offer a human channel
      instead of leaving the visitor at a dead end. */
-  var ERROR_MARKERS = ['مشغول', 'خطأ', 'بطيء', 'ضغط', 'غير متاح', 'تعذر', 'حصل خطأ'];
+  var ERROR_MARKERS = ['مشغول', 'خطأ', 'بطيء', 'ضغط', 'غير متاح', 'تعذر', 'حصل خطأ', 'زحمة', 'الحد الأقصى'];
   function isErrorText(text) {
     for (var i = 0; i < ERROR_MARKERS.length; i++) {
       if (String(text || '').indexOf(ERROR_MARKERS[i]) !== -1) return true;
     }
     return false;
+  }
+
+  /* ---------- rate limiting ---------- */
+
+  /* Groq answers 429 with "في زحمة..." and the site's own hourly cap answers
+     429 with "وصلت للحد الأقصى من الرسائل", so both are matched: on a rate
+     limit the composer locks with a visible countdown instead of letting the
+     visitor hammer a request that is already refused. */
+  var RATE_MARKERS = ['زحمة', 'rate limit', 'ratelimit', 'الحد الأقصى'];
+  var DEFAULT_COOLDOWN = 60;
+  var cooldownLeft = 0;
+  var cooldownTimer = null;
+
+  function isRateLimit(status, text) {
+    if (status === 429) return true;
+    var t = String(text || '').toLowerCase();
+    for (var i = 0; i < RATE_MARKERS.length; i++) {
+      if (t.indexOf(RATE_MARKERS[i]) !== -1) return true;
+    }
+    return false;
+  }
+
+  /* How long to wait: prefer the number the server actually sent. The site's
+     own cap is an hour, so a 60s retry there would just fail again. */
+  function rateWaitSeconds(text) {
+    var m = String(text || '').match(/(\d+)\s*(ثانية|ثواني)/);
+    if (m) return Math.min(parseInt(m[1], 10) || DEFAULT_COOLDOWN, 300);
+    if (String(text || '').indexOf('ساعة') !== -1) return 3600;
+    return DEFAULT_COOLDOWN;
+  }
+
+  function cooldownText(seconds) {
+    return 'في زحمة حالياً 🌙 استنى ' + seconds + ' ثانية وجرّب تاني، ' +
+           'أو تواصل معنا على واتساب 201095454012.';
+  }
+
+  function setComposerDisabled(disabled) {
+    var input = el('chatbot-input');
+    var send = el('chatbot-send');
+    if (input) {
+      input.disabled = disabled;
+      input.setAttribute('aria-disabled', disabled ? 'true' : 'false');
+    }
+    if (send) {
+      /* Never touch the button's contents: it holds the send icon. */
+      send.disabled = disabled;
+      send.setAttribute('aria-disabled', disabled ? 'true' : 'false');
+    }
+  }
+
+  function startCooldown(seconds) {
+    var wait = Math.max(1, seconds || DEFAULT_COOLDOWN);
+    if (cooldownTimer) return;              // already counting: keep the longer one
+    cooldownLeft = wait;
+    setComposerDisabled(true);
+    hideQuick();                            // the chips are send buttons too
+
+    var node = add('bot', cooldownText(cooldownLeft), false);
+    var paint = function () {
+      if (node && node.firstChild) node.firstChild.nodeValue = cooldownText(cooldownLeft);
+    };
+    cooldownTimer = setInterval(function () {
+      cooldownLeft -= 1;
+      if (cooldownLeft <= 0) {
+        clearInterval(cooldownTimer);
+        cooldownTimer = null;
+        cooldownLeft = 0;
+        setComposerDisabled(false);
+        if (node && node.firstChild) {
+          node.firstChild.nodeValue = 'تمام، جرّب تاني دلوقتي 🌙';
+        }
+        return;
+      }
+      paint();
+    }, 1000);
+  }
+
+  /* A 5xx with an HTML body is a server problem, not a lost connection, and
+     saying "تعذر الاتصال" for it sent people looking at their own wifi. */
+  function serverErrorText(status) {
+    if (status === 502 || status === 503 || status === 504) {
+      return 'السيرفر مشغول دلوقتي. استنى ثانية وجرّب تاني 🌙';
+    }
+    if (status >= 500) return 'حصل خطأ في السيرفر. جرّب تاني بعد شوية.';
+    return 'حصل خطأ مؤقت. حاول تاني.';
   }
 
   function addWhatsAppButton() {
@@ -420,6 +512,7 @@
 
   function send(text) {
     if (!text || isLoading) return;
+    if (cooldownLeft > 0) return;          // rate limited: the composer is locked
     var inp = el('chatbot-input');
     if (inp) inp.value = '';
     hideQuick();
@@ -438,17 +531,35 @@
       body: JSON.stringify({ message: text, history: history.slice(-6) })
     })
       .then(function (r) {
-        return r.json().then(function (d) { return { ok: r.ok, data: d }; });
+        /* Read the body as text first: a 429/500 from the app server or the
+           gateway can be an HTML page, and r.json() would throw on it and
+           report a fake connection failure. */
+        return r.text().then(function (t) {
+          var d = null;
+          try { d = JSON.parse(t); } catch (e) { d = null; }
+          return { ok: r.ok, status: r.status, data: d, raw: t };
+        });
       })
       .then(function (res) {
         hideTyping();
+        var reply = (res.data && res.data.reply) || '';
+
+        if (isRateLimit(res.status, reply)) {
+          var wait = rateWaitSeconds(reply || res.data && res.data.retry_after);
+          add('bot', reply || 'في زحمة حالياً 🌙 جرب تاني بعد شوية.', false);
+          addWhatsAppButton();
+          startCooldown(wait);
+          return;
+        }
+
         if (!res.ok) {
-          add('bot', (res.data && res.data.reply) || 'حصل خطأ مؤقت. حاول تاني.', false);
+          add('bot', reply || serverErrorText(res.status), false);
           addWhatsAppButton();
           return;
         }
-        add('bot', res.data.reply, true);
-        if (isErrorText(res.data.reply)) addWhatsAppButton();
+
+        add('bot', reply, true);
+        if (isErrorText(reply)) addWhatsAppButton();
         if (res.data.action === 'start_booking') {
           hideTyping();
           stepTrips();

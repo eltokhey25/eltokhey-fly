@@ -16,13 +16,16 @@ from django.urls import reverse
 from .chatbot import (
     GROQ_MODEL,
     MODEL_FALLBACKS,
+    _build_messages,
     _extract_action,
     _resolve_api_key,
+    _should_include_trips,
     build_system_prompt,
     detect_booking_intent,
     get_chatbot_response,
 )
 from .models import Booking, BookingStatus, Review, ReviewStatus, SiteSettings, Trip
+from .views import CHAT_RATE_LIMIT_MESSAGE
 
 
 class PageViewTests(TestCase):
@@ -95,6 +98,182 @@ class PageViewTests(TestCase):
         self.assertEqual(resp2.status_code, 404)
 
 
+class ChatCostControlTests(TestCase):
+    """Token discipline: the account is capped at 6000 tokens/minute.
+
+    Every test here protects one of the three levers that keep a real visitor
+    inside that budget: skipping the trip list, caching repeated questions, and
+    switching model instead of sleeping on an empty bucket.
+    """
+
+    def setUp(self):
+        cache.clear()
+        self.addCleanup(cache.clear)
+        patcher = mock.patch('core.chatbot._resolve_api_key', return_value='test-key')
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def ok(self, content='العمرة بـ 37900 جنيه'):
+        r = mock.Mock()
+        r.status_code = 200
+        r.headers = {}
+        r.text = ''
+        r.json = mock.Mock(return_value={
+            'choices': [{'message': {'content': content}, 'finish_reason': 'stop'}],
+            'usage': {'prompt_tokens': 100, 'completion_tokens': 10, 'total_tokens': 110},
+        })
+        return r
+
+    # --- trip list gating ---
+
+    def test_greeting_does_not_send_the_trip_list(self):
+        with mock.patch('core.chatbot.requests.post', return_value=self.ok()) as post:
+            get_chatbot_response('السلام عليكم')
+        system = post.call_args.kwargs['json']['messages'][0]['content']
+        self.assertNotIn('=== الرحلات', system)
+
+    def test_trip_question_sends_the_trip_list(self):
+        with mock.patch('core.chatbot.requests.post', return_value=self.ok()) as post:
+            get_chatbot_response('عايز أعرف الرحلات')
+        system = post.call_args.kwargs['json']['messages'][0]['content']
+        self.assertIn('=== الرحلات', system)
+
+    def test_the_most_common_question_matches_a_trip_keyword(self):
+        """"الأسعار" folds to "الاسعار", which no longer contains the
+        substring "سعر" -- a keyword list without the folded form silently
+        drops the single most asked question on the site."""
+        self.assertTrue(_should_include_trips('الأسعار'))
+        self.assertTrue(_should_include_trips('الاسعار'))
+        self.assertTrue(_should_include_trips('كام سعر العمرة؟'))
+        self.assertTrue(_should_include_trips('المواعيد Available؟'))
+
+    def test_unrelated_messages_do_not_pay_for_trips(self):
+        for msg in ['السلام عليكم', 'مين انت', 'ازيك', 'شكرا', '']:
+            with self.subTest(msg=msg):
+                self.assertFalse(_should_include_trips(msg))
+
+    def test_greeting_prompt_is_much_smaller_than_the_full_one(self):
+        for i in range(4):
+            Trip.objects.create(
+                name=f'رحلة {i}', slug=f'prompt-size-{i}', is_active=True,
+                price=1000 + i, duration='5 يوم',
+            )
+        full = build_system_prompt(include_trips=True)
+        lean = build_system_prompt(include_trips=False)
+        self.assertNotIn('=== الرحلات', lean)
+        self.assertIn('start_booking', lean, 'booking rules must survive the trim')
+        self.assertLess(len(lean), len(full) * 0.75)
+
+    # --- response cache ---
+
+    def test_repeated_question_is_answered_once(self):
+        with mock.patch('core.chatbot.requests.post', return_value=self.ok()) as post:
+            first = get_chatbot_response('الأسعار')
+            second = get_chatbot_response('الأسعار')
+        self.assertEqual(first, second)
+        self.assertEqual(post.call_count, 1, 'the second identical question must be free')
+
+    def test_cache_key_ignores_spacing_and_hamza_variants(self):
+        """Same question, typed differently by two visitors: one Groq call."""
+        with mock.patch('core.chatbot.requests.post', return_value=self.ok()) as post:
+            get_chatbot_response('الأسعار')
+            get_chatbot_response('  الأسعار  ')
+        self.assertEqual(post.call_count, 1)
+
+    def test_cache_key_is_stable_across_processes(self):
+        """Python randomises str hashing per process, so a hash() key would
+        miss in every gunicorn worker while the file cache grows forever."""
+        import subprocess
+        import sys
+        code = (
+            'import django,os,sys;'
+            'sys.path.insert(0,".");'
+            'os.environ.setdefault("DJANGO_SETTINGS_MODULE","config.settings");'
+            'django.setup();'
+            'from core.chatbot import _cache_key;'
+            'print(_cache_key("الأسعار"))'
+        )
+        outputs = set()
+        for seed in ('0', '12345'):
+            out = subprocess.run(
+                [sys.executable, '-c', code],
+                capture_output=True, text=True, env={**os.environ, 'PYTHONHASHSEED': seed},
+            )
+            outputs.add(out.stdout.strip())
+        self.assertEqual(len(outputs), 1, f'cache key is not stable: {outputs}')
+
+    def test_long_or_contextual_questions_are_not_cached(self):
+        long_question = 'عايز اعرف ' + ('تفاصيل دقيقة عن البرنامج ' * 6)
+        self.assertGreater(len(long_question), 60)
+        with mock.patch('core.chatbot.requests.post', return_value=self.ok()) as post:
+            get_chatbot_response(long_question)
+            get_chatbot_response(long_question)          # long: never cached
+            get_chatbot_response('الأسعار', [{'role': 'user', 'content': 'مرحبا'}])
+            get_chatbot_response('الأسعار', [{'role': 'user', 'content': 'مرحبا'}])
+            get_chatbot_response('الأسعار')
+            get_chatbot_response('الأسعار')              # bare short: cached
+        self.assertEqual(post.call_count, 5,
+                         'only the bare short question may be served from cache')
+
+    def test_booking_request_is_never_cached(self):
+        with mock.patch('core.chatbot.requests.post', return_value=self.ok('تمام')) as post:
+            get_chatbot_response('عايز احجز')
+            get_chatbot_response('عايز احجز')
+        self.assertEqual(post.call_count, 2)
+
+    # --- context window ---
+
+    def test_history_is_trimmed_to_fit_a_small_context_model(self):
+        """A 4k model has to lose turns that a 131k one would keep."""
+        history = [{'role': 'user', 'content': 'سؤال طويل جداً ' * 60} for _ in range(6)]
+        with mock.patch.dict('core.chatbot.MODEL_CONTEXT', {'allam-2-7b': 900}):
+            sent = _build_messages('الأسعار', history, model='allam-2-7b')
+        self.assertEqual(sent[0]['role'], 'system')
+        self.assertEqual(sent[-1]['content'], 'الأسعار')
+        self.assertLess(len(sent), 8, 'history must be dropped to fit 900 tokens')
+
+    def test_history_is_kept_when_it_fits(self):
+        history = [{'role': 'user', 'content': 'مرحبا'}] * 3
+        with mock.patch('core.chatbot.requests.post', return_value=self.ok()) as post:
+            get_chatbot_response('الأسعار', history)
+        sent = post.call_args.kwargs['json']['messages']
+        self.assertEqual(len(sent), 5)   # system + 3 + user
+
+    # --- model chain ---
+
+    def test_chain_starts_with_the_cheapest_model(self):
+        self.assertEqual(GROQ_MODEL, 'allam-2-7b')
+        with mock.patch('core.chatbot.requests.post', return_value=self.ok()) as post:
+            get_chatbot_response('الأسعار')
+        self.assertEqual(post.call_args.kwargs['json']['model'], 'allam-2-7b')
+
+    def test_every_model_in_the_chain_is_reachable(self):
+        """A model that 404s would waste a round trip on every single message."""
+        for model in MODEL_FALLBACKS:
+            with self.subTest(model=model):
+                self.assertNotIn(' ', model)
+
+
+class ChatApiErrorShapeTests(TestCase):
+    """The widget branches on these, so their shape is part of the contract."""
+
+    def setUp(self):
+        cache.clear()
+
+    def test_rate_limited_request_still_returns_json(self):
+        """The widget reads reply from a 429 body; an HTML error page there is
+        what used to surface as a fake connection failure."""
+        url = reverse('core:chat_api')
+        with mock.patch('core.views.get_chatbot_turn', return_value=('أهلاً', None)):
+            with override_settings(CHAT_RATE_LIMIT_PER_HOUR=1, CHAT_RATE_LIMIT_GLOBAL_PER_HOUR=999):
+                first = self.client.post(url, {'message': 'مرحبا'}, content_type='application/json')
+                second = self.client.post(url, {'message': 'مرحبا'}, content_type='application/json')
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 429)
+        self.assertEqual(second['Content-Type'].split(';')[0], 'application/json')
+        self.assertEqual(second.json()['reply'], CHAT_RATE_LIMIT_MESSAGE)
+
+
 class ChatPageTests(TestCase):
     """The mobile chat is a real page the floating launcher navigates to."""
 
@@ -120,6 +299,30 @@ class ChatPageTests(TestCase):
         """chatbot.js posts to /api/chat/ with the token from this page."""
         resp = self.client.get(reverse('core:chat_page'))
         self.assertContains(resp, 'name="csrf-token"')
+
+    def test_every_page_exposes_a_csrf_token_for_the_widget(self):
+        """The widget used to read the token from a hidden form input that only
+        the booking and review pages have, so on every other page it posted an
+        empty token, Django answered 403 with an HTML body, and the visitor saw
+        "تعذر الاتصال". The meta tag is the only token source that exists on
+        every page, so every page the widget appears on must have one."""
+        Trip.objects.create(name='رحلة', slug='csrf-trip', is_active=True, price='1000')
+        urls = [
+            reverse('core:home'),
+            reverse('core:trips'),
+            reverse('core:about'),
+            reverse('core:chat_page'),
+            reverse('core:booking'),
+            reverse('core:track_booking'),
+        ]
+        for url in urls:
+            with self.subTest(url=url):
+                resp = self.client.get(url)
+                self.assertEqual(resp.status_code, 200)
+                self.assertContains(resp, 'name="csrf-token"')
+                match = re.search(r'name="csrf-token" content="([^"]*)"', resp.content.decode())
+                self.assertIsNotNone(match, f'{url} has no csrf-token meta')
+                self.assertTrue(match.group(1), f'{url} ships an empty csrf token')
 
     def test_launcher_lives_on_every_page_and_points_at_the_chat_page(self):
         """The floating button is in the shared widget, so it is on the home
@@ -554,7 +757,7 @@ class ChatbotPromptTests(TestCase):
         Trip.objects.all().delete()
 
     def _trips_block(self):
-        prompt = build_system_prompt()
+        prompt = build_system_prompt(include_trips=True)
         return prompt[prompt.index('=== الرحلات'):prompt.index('=== نهاية')]
 
     def test_inactive_trips_are_excluded(self):
@@ -606,7 +809,7 @@ class ChatbotPromptTests(TestCase):
         self.assertIn('الأماكن: 15 مكان', block)
 
     def test_prompt_tells_model_not_to_invent_a_price(self):
-        prompt = build_system_prompt()
+        prompt = build_system_prompt(include_trips=True)
         self.assertIn('لو الرحلة ليس لها سعر محدد', prompt)
         self.assertIn('السعر قريباً', prompt)
         self.assertIn('201095454012', prompt)
@@ -617,6 +820,13 @@ class ChatbotPromptTests(TestCase):
 
 
 class ChatbotResponseTests(TestCase):
+    def setUp(self):
+        # The response cache is file-backed and outlives the test database, so a
+        # real answer cached by an earlier test would answer this one instead of
+        # the mock.
+        cache.clear()
+        self.addCleanup(cache.clear)
+
     @staticmethod
     def fake_response(content='ok', finish='stop'):
         """A real requests.Response stand-in: status_code, text and json()."""
@@ -1022,10 +1232,13 @@ class GroqErrorHandlingTests(TestCase):
                     return get_chatbot_response('مرحبا')
             return get_chatbot_response('مرحبا')
 
-    def fake(self, status=200, payload=None, text=''):
+    def fake(self, status=200, payload=None, text='', headers=None):
         r = mock.Mock()
         r.status_code = status
         r.text = text
+        # The 429 path logs the response headers, so a mock without a real dict
+        # there would blow up on dict(Mock()).
+        r.headers = headers or {}
         r.json = mock.Mock(return_value=payload or {})
         return r
 
@@ -1049,36 +1262,67 @@ class GroqErrorHandlingTests(TestCase):
         self.assertEqual(post.call_count, 1, 'auth errors must not walk the fallback chain')
         self.assertTrue(any('401' in line for line in logs.output), logs.output)
 
-    def test_transient_429_retries_the_same_model_first(self):
-        """A momentary 429 should be ridden out before giving up on a model."""
+    def test_429_switches_model_immediately_without_sleeping(self):
+        """A 429 must not be retried on the same model.
+
+        The bucket is per model *and* per minute, so sleeping 1.5s and asking
+        the same model again spends a round trip to be refused identically, and
+        the sleep used to push the whole turn past the host gateway timeout --
+        which is what visitors actually saw as "تعذر الاتصال".
+        """
         limited = self.fake(status=429, text='{"error":{"message":"Rate limit reached"}}')
         good = self.fake(200, self.ok_payload())
-        with mock.patch('core.chatbot.time.sleep'):
+        with mock.patch('core.chatbot.time.sleep') as slept:
             with mock.patch('core.chatbot.requests.post', side_effect=[limited, good]) as post:
                 reply = get_chatbot_response('مرحبا')
         self.assertEqual(reply, 'أهلاً')
         used = [c.kwargs['json']['model'] for c in post.call_args_list]
-        self.assertEqual(used[0], used[1])
+        self.assertEqual(len(used), 2, '429 must go straight to the next model')
+        self.assertNotEqual(used[0], used[1])
+        slept.assert_not_called()
 
-    def test_persistent_429_escalates_to_a_different_model(self):
-        """Groq caps limits per model, so a hard 429 must change model."""
+    def test_persistent_429_walks_every_fallback(self):
+        """Groq caps limits per model, so each 429 has to change model."""
         limited = self.fake(status=429, text='{"error":{"message":"Rate limit reached on tokens per minute"}}')
         good = self.fake(200, self.ok_payload())
-        exhausted = [limited] * (2 + 1)  # MAX_429_RETRIES + 1
-        with mock.patch('core.chatbot.time.sleep'):
-            with mock.patch('core.chatbot.requests.post', side_effect=exhausted + [good]) as post:
+        # Every model but the last refuses, so the chain has to survive
+        # len-1 refusals and still find an answer.
+        exhausted = [limited] * (len(MODEL_FALLBACKS) - 1) + [good]
+        with mock.patch('core.chatbot.time.sleep') as slept:
+            with mock.patch('core.chatbot.requests.post', side_effect=exhausted) as post:
                 reply = get_chatbot_response('مرحبا')
         self.assertEqual(reply, 'أهلاً')
         used = [c.kwargs['json']['model'] for c in post.call_args_list]
-        self.assertNotEqual(used[0], used[-1], 'persistent 429 must change model')
+        self.assertEqual(len(used), len(MODEL_FALLBACKS))
+        self.assertEqual(len(set(used)), len(MODEL_FALLBACKS),
+                         'every 429 must reach a different model')
+        slept.assert_not_called()
 
-    def test_429_exhausted_says_try_again(self):
+    def test_429_exhausted_tells_the_visitor_to_wait(self):
         limited = self.fake(status=429, text='{"error":{"message":"Rate limit reached"}}')
-        with mock.patch('core.chatbot.time.sleep'):
-            with mock.patch('core.chatbot.requests.post', return_value=limited):
-                reply = get_chatbot_response('مرحبا')
-        self.assertIn('ضغط', reply)
+        with mock.patch('core.chatbot.requests.post', return_value=limited):
+            reply = get_chatbot_response('مرحبا')
+        self.assertIn('زحمة', reply)
+        self.assertIn('201095454012', reply)
         self.assertNotIn('بطيء', reply)
+
+    def test_429_retry_after_header_is_surfaced_to_the_visitor(self):
+        limited = self.fake(status=429, text='{"error":{"message":"Rate limit reached"}}')
+        limited.headers = {'retry-after': '42'}
+        with mock.patch('core.chatbot.requests.post', return_value=limited):
+            reply = get_chatbot_response('مرحبا')
+        self.assertIn('42', reply)
+
+    def test_rate_limited_reply_is_never_cached(self):
+        """A cached failure would keep failing for the whole TTL even after
+        the limit resets, which is worse than no cache at all."""
+        limited = self.fake(status=429, text='{"error":{"message":"Rate limit reached"}}')
+        with mock.patch('core.chatbot.requests.post', return_value=limited) as post:
+            first = get_chatbot_response('الأسعار')
+            second = get_chatbot_response('الأسعار')
+        self.assertEqual(first, second)
+        self.assertEqual(post.call_count, len(MODEL_FALLBACKS) * 2,
+                         'a failure must never be served from cache')
 
     def test_empty_reasoning_reply_is_retried_not_shown_as_busy(self):
         empty = self.fake(200, self.ok_payload(content='', finish='length'))
