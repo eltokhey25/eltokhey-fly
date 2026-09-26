@@ -3,85 +3,76 @@
    The launcher is a real header button (Option A), not a floating widget, so it
    can never collide with the .fab-call / .fab-wa stack. Those sit at
    inset-inline-end (physical LEFT in this RTL site) from 18px to 136px off the
-   bottom, which is exactly where a floating toggle used to overlap them. */
+   bottom, which is exactly where a floating toggle used to overlap them.
+
+   Launcher design: a quiet outline pill that sits next to the gold CTA — white
+   fill, 1.5px emerald hairline, emerald label, 18px bot glyph, 14px type. It
+   inverts to a solid emerald fill on hover (pointer devices only), on :active
+   and while the panel is open (aria-expanded=true), so the open state reads
+   without the old pulsing corner dot. Height is deliberately NOT hard-coded:
+   align-self:stretch inherits the nav row height, which .nav-cta sets — the two
+   buttons stay pixel-identical even if .btn padding changes later. */
 
 .chat-pill {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
+  flex: 0 0 auto;
+  align-self: stretch;
   min-height: 44px;
-  padding: 0 16px 0 12px;
-  border-radius: 999px;
-  border: 2px solid var(--primary-700, #0f766e);
-  background: linear-gradient(135deg, #0d9488, #0f766e);
-  color: #fff;
+  padding: 8px 16px;
+  border: 1.5px solid var(--primary-700, #0f766e);
+  border-radius: var(--radius-full, 999px);
+  background: #fff;
+  color: var(--primary-700, #0f766e);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .05), 0 4px 12px rgba(13, 148, 136, .10);
   font-family: inherit;
-  font-size: 0.9375rem;
-  font-weight: 700;
+  font-size: 14px;
+  font-weight: 600;
   line-height: 1;
-  cursor: pointer;
-  position: relative;
   white-space: nowrap;
-  transition: transform .2s, box-shadow .2s, background .2s;
+  cursor: pointer;
+  transition: background .2s ease, color .2s ease, border-color .2s ease, box-shadow .2s ease;
 }
-.chat-pill:hover {
-  transform: scale(1.05);
-  color: #fff;
-  box-shadow: 0 6px 20px rgba(13, 148, 136, .45);
+.chat-pill-label { white-space: nowrap; }
+.chat-pill-icon {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+}
+/* 8px from the gold CTA. .main-nav's flex gap is --space-8 (32px), so the pill
+   pulls back all but 8px of the gap that separates the two buttons. */
+.chat-pill { margin-inline-end: calc(8px - var(--space-8, 32px)); }
+
+/* Hover only where a real pointer exists, otherwise the pill stays solid after
+   the first tap on touch devices. */
+@media (hover: hover) and (pointer: fine) {
+  .chat-pill:hover {
+    background: var(--primary-700, #0f766e);
+    border-color: var(--primary-700, #0f766e);
+    color: #fff;
+    box-shadow: 0 6px 16px rgba(13, 148, 136, .28);
+  }
 }
 .chat-pill:focus-visible {
   outline: 3px solid var(--gold-400, #f59e0b);
   outline-offset: 2px;
 }
-.chat-pill[aria-expanded="true"] {
-  background: var(--primary-800, #115e59);
-  box-shadow: inset 0 2px 6px rgba(0, 0, 0, .22);
+/* Open panel = pressed state, so the launcher never looks "off" once tapped. */
+.chat-pill[aria-expanded="true"],
+.chat-pill:active {
+  background: var(--primary-700, #0f766e);
+  border-color: var(--primary-700, #0f766e);
+  color: #fff;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, .18);
 }
-.chat-pill-icon {
-  width: 24px;
-  height: 24px;
-  flex-shrink: 0;
-  animation: chatbot-float 3s ease-in-out infinite;
-}
-.chat-pill:hover .chat-pill-icon,
-.chat-pill[aria-expanded="true"] .chat-pill-icon { animation-play-state: paused; }
 /* Brief pop when the panel opens. */
-.chat-pill.is-opening .chat-pill-icon { animation: chatbot-burst .5s ease; }
-
-/* Idle float, 4px up/down, to draw the eye without being noisy. */
-@keyframes chatbot-float {
-  0%, 100% { transform: translateY(0);    }
-  50%      { transform: translateY(-4px); }
-}
+.chat-pill.is-opening .chat-pill-icon { animation: chatbot-burst .4s ease; }
 @keyframes chatbot-burst {
-  0%   { transform: rotate(0deg)   scale(1);    }
-  45%  { transform: rotate(-18deg) scale(1.14); }
-  100% { transform: rotate(0deg)   scale(1);    }
-}
-
-/* Green "assistant is online" dot on the pill. */
-.chat-online-dot {
-  position: absolute;
-  top: -3px;
-  inset-inline-end: -3px;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: #22c55e;
-  border: 2px solid #fff;
-  box-sizing: content-box;
-}
-.chat-online-dot::after {
-  content: '';
-  position: absolute;
-  inset: -2px;
-  border-radius: 50%;
-  background: #22c55e;
-  animation: chatbot-online 2.2s ease-out infinite;
-}
-@keyframes chatbot-online {
-  0%   { transform: scale(1);   opacity: .6; }
-  100% { transform: scale(2.3); opacity: 0;  }
+  0%   { transform: scale(1);    }
+  40%  { transform: scale(1.18); }
+  100% { transform: scale(1);    }
 }
 
 /* The panel hangs from the header, like a dropdown. The max-height stops it
@@ -394,13 +385,22 @@
 /* --- Mobile ------------------------------------------------------------- */
 
 @media (max-width: 768px) {
-  /* No floating toggle on mobile, so it cannot fight the .fab stack. The pill
-     lives in the hamburger drawer instead and goes full width. */
+  /* No floating toggle on mobile, so it cannot fight the .fab stack. Inside the
+     hamburger drawer the pill becomes a full-width row — glyph and label stay on
+     one line (they were stacked and oversized before), 44px tall, centred. */
   .chat-pill {
+    align-self: auto;
     width: 100%;
-    justify-content: center;
-    margin-top: var(--space-2, 8px);
-    min-height: 48px;
+    height: 44px;
+    min-height: 44px;
+    margin: var(--space-2, 8px) 0 0;
+    padding: 8px 16px;
+    font-size: 14px;
+  }
+  /* Touch devices get the press state instead of the hover state. */
+  .chat-pill:active {
+    background: var(--primary-700, #0f766e);
+    color: #fff;
   }
 
   .chatbot-window {
@@ -446,10 +446,27 @@
 /* Body scroll lock while the chat covers the screen (set by chatbot.js). */
 body.chatbot-scroll-locked { overflow: hidden; }
 
+/* Under 360px the label would crowd the drawer, so show the glyph alone — still
+   centred, still a full-width tap target, and the button's aria-label keeps the
+   accessible name. */
+@media (max-width: 359px) {
+  .chat-pill-label { display: none; }
+  .chat-pill { padding: 8px 12px; }
+}
+
+/* Tablet: the inline nav row is tight, so the pill trims its padding instead of
+   pushing the nav out of the container. Scoped to >=769px so it never overrides
+   the drawer sizing (and 14px label) that the block above sets. */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .chat-pill {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .chat-pill-icon,
-  .chat-online-dot::after { animation: none; }
-  .chat-pill:hover { transform: none; }
+  .chat-pill.is-opening .chat-pill-icon { animation: none; }
   .chatbot-window,
   .chatbot-window.open { animation: none; }
 }
