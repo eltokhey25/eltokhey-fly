@@ -5,31 +5,15 @@ Django settings for the Hajj & Umrah site.
 import os
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 BASE_DIR = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = BASE_DIR.parent
 
-
-def _load_env_file(*paths):
-    for path in paths:
-        env_file = Path(path)
-        if not env_file.exists():
-            continue
-        try:
-            with open(env_file) as fh:
-                for line in fh:
-                    line = line.strip()
-                    if not line or line.startswith('#') or '=' not in line:
-                        continue
-                    key, _, value = line.partition('=')
-                    key = key.strip()
-                    value = value.strip().strip('"').strip("'")
-                    if key:
-                        os.environ.setdefault(key, value)
-        except OSError:
-            continue
-
-
-# Load local .env files (if present), without overriding real environment variables.
-_load_env_file(BASE_DIR / '.env', BASE_DIR.parent / '.env')
+# Load .env before anything reads the environment. override=False keeps real
+# environment variables (systemd, fly secrets, the WSGI file) authoritative.
+load_dotenv(PROJECT_ROOT / '.env')
+load_dotenv(BASE_DIR / '.env')
 
 # Load secret keys from the environment (or a local .env file). The fallback
 # below is only for local development — set DJANGO_SECRET_KEY on the server.

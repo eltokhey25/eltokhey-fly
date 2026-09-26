@@ -1,8 +1,10 @@
 import logging
 import os
+from pathlib import Path
 
 import requests
 from django.conf import settings
+from dotenv import load_dotenv
 
 from core.models import Trip
 
@@ -116,7 +118,37 @@ def build_system_prompt():
 
 
 def _resolve_api_key():
-    return os.environ.get('GROQ_API_KEY') or getattr(settings, 'GROQ_API_KEY', '')
+    """Find GROQ_API_KEY, trying each known source in turn.
+
+    Order matters: a real environment variable always wins, then the Django
+    setting, and only then the .env file on disk. The last step matters on
+    hosts where the WSGI entry point never loaded .env (or where it was added
+    after the process started) -- without it the chatbot answers
+    "غير متاح حالياً" for every visitor even though the key is right there.
+    """
+    key = os.environ.get('GROQ_API_KEY')
+    if key:
+        logger.info('GROQ_API_KEY resolved from the process environment')
+        return key.strip()
+
+    key = getattr(settings, 'GROQ_API_KEY', '')
+    if key:
+        logger.info('GROQ_API_KEY resolved from django settings')
+        return str(key).strip()
+
+    env_path = Path(getattr(settings, 'PROJECT_ROOT', Path(__file__).resolve().parent.parent.parent)) / '.env'
+    if env_path.is_file():
+        load_dotenv(env_path, override=False)
+        key = os.environ.get('GROQ_API_KEY')
+        if key:
+            logger.info('GROQ_API_KEY resolved from %s', env_path)
+            return key.strip()
+        logger.warning('%s exists but defines no GROQ_API_KEY', env_path)
+    else:
+        logger.warning('No .env file at %s', env_path)
+
+    logger.error('GROQ_API_KEY is not set in any known source')
+    return ''
 
 
 def _build_messages(user_message, conversation_history=None):

@@ -1,6 +1,8 @@
 import json
 import os
 import re
+import tempfile
+from pathlib import Path
 from unittest import mock
 from urllib.parse import unquote
 
@@ -9,7 +11,7 @@ from django.core.cache import cache
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
-from .chatbot import build_system_prompt, get_chatbot_response
+from .chatbot import _resolve_api_key, build_system_prompt, get_chatbot_response
 from .models import Booking, BookingStatus, Review, ReviewStatus, SiteSettings, Trip
 
 
@@ -760,3 +762,50 @@ class PriceDisplayTests(TestCase):
         html = self.client.get(reverse('core:trip_detail', args=[trip.slug])).content.decode()
         self.assertIn('قريباً', html)
         self.assertNotIn(' departures', html)
+
+
+class ResolveApiKeyTests(TestCase):
+    """The chatbot must find its key from whichever source the host provides."""
+
+    def test_prefers_process_environment(self):
+        with mock.patch.dict(os.environ, {'GROQ_API_KEY': 'from-env'}):
+            with override_settings(GROQ_API_KEY='from-settings'):
+                self.assertEqual(_resolve_api_key(), 'from-env')
+
+    def test_falls_back_to_django_settings(self):
+        with mock.patch.dict(os.environ, {}, clear=True):
+            with override_settings(GROQ_API_KEY='from-settings'):
+                self.assertEqual(_resolve_api_key(), 'from-settings')
+
+    def test_falls_back_to_dotenv_file(self):
+        """Covers hosts where nothing loaded .env before settings ran."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / '.env').write_text('GROQ_API_KEY=from-dotenv-file\n')
+            with mock.patch.dict(os.environ, {}, clear=True):
+                with override_settings(GROQ_API_KEY='', PROJECT_ROOT=root):
+                    self.assertEqual(_resolve_api_key(), 'from-dotenv-file')
+
+    def test_returns_empty_and_logs_when_nothing_is_configured(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with mock.patch.dict(os.environ, {}, clear=True):
+                with override_settings(GROQ_API_KEY='', PROJECT_ROOT=Path(tmp)):
+                    with self.assertLogs('core.chatbot', level='ERROR') as logs:
+                        self.assertEqual(_resolve_api_key(), '')
+        self.assertTrue(
+            any('not set' in line for line in logs.output),
+            logs.output,
+        )
+
+    def test_missing_dotenv_is_reported_not_raised(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with mock.patch.dict(os.environ, {}, clear=True):
+                with override_settings(GROQ_API_KEY='', PROJECT_ROOT=Path(tmp) / 'nope'):
+                    self.assertEqual(_resolve_api_key(), '')
+
+    def test_chatbot_falls_back_to_whatsapp_when_key_missing(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with mock.patch.dict(os.environ, {}, clear=True):
+                with override_settings(GROQ_API_KEY='', PROJECT_ROOT=Path(tmp)):
+                    reply = get_chatbot_response('عايز أعمل عمرة')
+        self.assertIn('201095454012', reply)
