@@ -6,12 +6,19 @@ from pathlib import Path
 from unittest import mock
 from urllib.parse import unquote
 
-from django.contrib.auth import get_user_model
+from django.core import mail
 from django.core.cache import cache
+from django.contrib.auth import get_user_model
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
-from .chatbot import _resolve_api_key, build_system_prompt, get_chatbot_response
+from .chatbot import (
+    _extract_action,
+    _resolve_api_key,
+    build_system_prompt,
+    detect_booking_intent,
+    get_chatbot_response,
+)
 from .models import Booking, BookingStatus, Review, ReviewStatus, SiteSettings, Trip
 
 
@@ -642,13 +649,13 @@ class ChatApiTests(TestCase):
 
     def test_post_without_csrf_token_is_rejected(self):
         """CSRF must stay on: otherwise any site can spend our Groq credits."""
-        with mock.patch('core.views.get_chatbot_response', return_value='ok') as call:
+        with mock.patch('core.views.get_chatbot_turn', return_value='ok') as call:
             resp = self._post(csrf=False)
         self.assertEqual(resp.status_code, 403)
         call.assert_not_called()
 
     def test_post_with_csrf_token_is_accepted(self):
-        with mock.patch('core.views.get_chatbot_response', return_value='أهلاً') as call:
+        with mock.patch('core.views.get_chatbot_turn', return_value=('أهلاً', None)) as call:
             resp = self._post()
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.json()['reply'], 'أهلاً')
@@ -663,7 +670,7 @@ class ChatApiTests(TestCase):
         match = re.search(r'<meta name="csrf-token" content="([^"]+)"', html)
         self.assertIsNotNone(match, 'csrf-token meta tag missing from base.html')
         # Mirror the browser exactly: token from the page, sent as X-CSRFToken.
-        with mock.patch('core.views.get_chatbot_response', return_value='أهلاً'):
+        with mock.patch('core.views.get_chatbot_turn', return_value=('أهلاً', None)):
             resp = self.client.post(
                 self.url,
                 data=json.dumps({'message': 'مرحبا'}),
@@ -674,7 +681,7 @@ class ChatApiTests(TestCase):
 
     def test_empty_and_malformed_bodies_are_rejected(self):
         token = self._prime_csrf()
-        with mock.patch('core.views.get_chatbot_response') as call:
+        with mock.patch('core.views.get_chatbot_turn') as call:
             self.assertEqual(self._post({'message': '   '}).status_code, 400)
             self.assertEqual(self._post({}).status_code, 400)
             for body in ('not json', '[1,2]', '"a string"'):
@@ -688,7 +695,7 @@ class ChatApiTests(TestCase):
         call.assert_not_called()
 
     def test_per_ip_cap_is_enforced(self):
-        with mock.patch('core.views.get_chatbot_response', return_value='أهلاً'):
+        with mock.patch('core.views.get_chatbot_turn', return_value=('أهلاً', None)):
             with override_settings(CHAT_RATE_LIMIT_PER_HOUR=3):
                 codes = [self._post(REMOTE_ADDR='1.2.3.4').status_code for _ in range(5)]
         self.assertEqual(codes[:3], [200, 200, 200])
@@ -701,7 +708,7 @@ class ChatApiTests(TestCase):
         <address the proxy appended>". Only the right-most entry is trusted, so
         every one of these requests shares the real visitor's single bucket.
         """
-        with mock.patch('core.views.get_chatbot_response', return_value='أهلاً'):
+        with mock.patch('core.views.get_chatbot_turn', return_value=('أهلاً', None)):
             with override_settings(CHAT_RATE_LIMIT_PER_HOUR=2):
                 for i in range(4):
                     self._post(
@@ -712,14 +719,14 @@ class ChatApiTests(TestCase):
         self.assertIsNone(cache.get('chat_ip_6.6.6.0'))
 
     def test_untrusted_proxy_falls_back_to_remote_addr(self):
-        with mock.patch('core.views.get_chatbot_response', return_value='أهلاً'):
+        with mock.patch('core.views.get_chatbot_turn', return_value=('أهلاً', None)):
             with override_settings(TRUST_X_FORWARDED_FOR=False):
                 self._post(HTTP_X_FORWARDED_FOR='6.6.6.6', REMOTE_ADDR='1.2.3.4')
         self.assertEqual(cache.get('chat_ip_1.2.3.4'), 1)
         self.assertIsNone(cache.get('chat_ip_6.6.6.6'))
 
     def test_global_cap_bounds_total_spend(self):
-        with mock.patch('core.views.get_chatbot_response', return_value='أهلاً'):
+        with mock.patch('core.views.get_chatbot_turn', return_value=('أهلاً', None)):
             with override_settings(
                 CHAT_RATE_LIMIT_PER_HOUR=100, CHAT_RATE_LIMIT_GLOBAL_PER_HOUR=2
             ):
@@ -809,3 +816,143 @@ class ResolveApiKeyTests(TestCase):
                 with override_settings(GROQ_API_KEY='', PROJECT_ROOT=Path(tmp)):
                     reply = get_chatbot_response('عايز أعمل عمرة')
         self.assertIn('201095454012', reply)
+
+
+class BookingIntentTests(TestCase):
+    """Booking intent must be deterministic, not model-dependent."""
+
+    def test_positive_intents(self):
+        for msg in ['عايز أحجز عمرة', 'احجزلي', 'أحجز', 'حجز', 'ابعتلي', 'سجلني', 'اكتبلي', 'نفسي أحجز']:
+            with self.subTest(msg=msg):
+                self.assertEqual(detect_booking_intent(msg), 'start_booking')
+
+    def test_arabic_orthography_variants(self):
+        for msg in ['إحجزلي', 'احجز لى', 'نفسى احجز', 'ابغى حجز']:
+            with self.subTest(msg=msg):
+                self.assertEqual(detect_booking_intent(msg), 'start_booking')
+
+    def test_negative_intents(self):
+        for msg in ['أسعار الحج', 'مفيش رحلة كويسة', 'مين رئيس مصر؟', '', None, 'السلام عليكم']:
+            with self.subTest(msg=msg):
+                self.assertIsNone(detect_booking_intent(msg))
+
+    def test_action_tag_is_stripped_from_reply(self):
+        clean, action = _extract_action('يا سلام\n{"action": "start_booking"}\nهبدأ الحجز')
+        self.assertEqual(action, 'start_booking')
+        self.assertNotIn('action', clean)
+        self.assertIn('هبدأ الحجز', clean)
+
+    def test_plain_reply_has_no_action(self):
+        clean, action = _extract_action('السعر 37900 جنيه')
+        self.assertEqual(clean, 'السعر 37900 جنيه')
+        self.assertIsNone(action)
+
+    def test_prompt_mentions_booking(self):
+        self.assertIn('start_booking', build_system_prompt())
+
+
+class ChatBookingApiTests(TestCase):
+    def setUp(self):
+        cache.clear()  # the hourly caps are file-backed and outlive the test
+        self.trip = Trip.objects.create(
+            name='عمرة اختبار', slug='omra-test', trip_type='عمرة', price='50000',
+        )
+        self.url = '/api/chat/booking/'
+        self.payload = {
+            'trip_id': self.trip.pk,
+            'name': 'أحمد محمد',
+            'phone': '01095454012',
+            'email': 'ahmed@example.com',
+            'number_of_people': 3,
+            'notes': 'ملاحظة',
+        }
+
+    def post(self, **over):
+        data = dict(self.payload)
+        data.update(over)
+        return self.client.post(self.url, data=json.dumps(data), content_type='application/json')
+
+    def test_creates_booking_with_reference_code(self):
+        r = self.post()
+        self.assertEqual(r.status_code, 201)
+        body = r.json()
+        self.assertTrue(body['ok'])
+        self.assertTrue(body['reference_code'].startswith('HJ-'))
+        booking = Booking.objects.get(reference_code=body['reference_code'])
+        self.assertEqual(booking.name, 'أحمد محمد')
+        self.assertEqual(booking.people, 3)
+        self.assertEqual(booking.status, BookingStatus.PENDING)
+        self.assertEqual(booking.trip_label, 'عمرة اختبار')
+
+    def test_sends_admin_and_customer_email(self):
+        with override_settings(ADMIN_NOTIFICATION_EMAIL='admin@example.com'):
+            self.post()
+        self.assertEqual(len(mail.outbox), 2)
+        self.assertIn('admin@example.com', mail.outbox[0].to)
+        self.assertEqual(Booking.objects.count(), 1)
+
+    def test_requires_name(self):
+        self.assertEqual(self.post(name='').status_code, 400)
+
+    def test_rejects_bad_phone(self):
+        self.assertEqual(self.post(phone='abc').status_code, 400)
+
+    def test_rejects_bad_email(self):
+        self.assertEqual(self.post(email='nope').status_code, 400)
+
+    def test_rejects_unknown_trip(self):
+        self.assertEqual(self.post(trip_id=99999).status_code, 400)
+        self.assertEqual(Booking.objects.count(), 0)
+
+    def test_trip_id_is_optional(self):
+        r = self.post(trip_id=None, trip_name='حج على حسب seas')
+        self.assertEqual(r.status_code, 201)
+        self.assertEqual(Booking.objects.get().trip_label, 'حج على حسب seas')
+
+    def test_rejects_get(self):
+        self.assertEqual(self.client.get(self.url).status_code, 405)
+
+    def test_rejects_invalid_json(self):
+        r = self.client.post(self.url, data='{oops', content_type='application/json')
+        self.assertEqual(r.status_code, 400)
+
+    def test_people_is_clamped(self):
+        r = self.post(number_of_people='9999')
+        self.assertEqual(r.status_code, 201)
+        self.assertEqual(Booking.objects.get().people, 50)
+
+    def test_get_is_blocked_without_csrf_token(self):
+        """No csrf_exempt: a third-party site must not create bookings."""
+        c = Client(enforce_csrf_checks=True)
+        r = c.post(self.url, data=json.dumps(self.payload), content_type='application/json')
+        self.assertEqual(r.status_code, 403)
+        self.assertEqual(Booking.objects.count(), 0)
+
+    def test_works_with_csrf_token(self):
+        c = Client(enforce_csrf_checks=True)
+        c.get('/')
+        token = c.cookies['csrftoken'].value
+        r = c.post(
+            self.url,
+            data=json.dumps(self.payload),
+            content_type='application/json',
+            HTTP_X_CSRFTOKEN=token,
+        )
+        self.assertEqual(r.status_code, 201)
+        self.assertEqual(Booking.objects.count(), 1)
+
+
+class ChatTripsApiTests(TestCase):
+    def test_returns_only_active_trips(self):
+        Trip.objects.create(name='نشطة', slug='active-one', is_active=True)
+        Trip.objects.create(name='مخفية', slug='hidden-one', is_active=False)
+        r = self.client.get('/api/chat/trips/')
+        self.assertEqual(r.status_code, 200)
+        names = [t['name'] for t in r.json()['trips']]
+        self.assertIn('نشطة', names)
+        self.assertNotIn('مخفية', names)
+
+    def test_includes_price_display(self):
+        Trip.objects.create(name='بغير سعر', slug='no-price', price='', is_active=True)
+        r = self.client.get('/api/chat/trips/')
+        self.assertTrue(r.json()['trips'][-1]['price_display'])

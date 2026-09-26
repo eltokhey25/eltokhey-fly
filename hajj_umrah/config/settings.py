@@ -159,6 +159,7 @@ GROQ_API_KEY = os.environ.get('GROQ_API_KEY', '')
 # rate limited. These caps bound how much Groq spend a single visitor (or the
 # site as a whole) can generate per hour.
 CHAT_RATE_LIMIT_PER_HOUR = int(os.environ.get('CHAT_RATE_LIMIT_PER_HOUR', '20'))
+CHAT_BOOKING_RATE_LIMIT_PER_HOUR = int(os.environ.get('CHAT_BOOKING_RATE_LIMIT_PER_HOUR', '10'))
 CHAT_RATE_LIMIT_GLOBAL_PER_HOUR = int(
     os.environ.get('CHAT_RATE_LIMIT_GLOBAL_PER_HOUR', '300')
 )

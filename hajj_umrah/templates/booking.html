@@ -120,16 +120,17 @@
               <select id="hu-departure" name="hu_departure">
                 <option value="">— اختر رحلة —</option>
                 {% for trip in trips %}
-                  <option value="{{ trip.name }}{% if trip.departure %} — {{ trip.departure|date:'Y-m-d' }}{% endif %}">{{ trip.name }}</option>
+                  <option value="{{ trip.name }}{% if trip.departure %} — {{ trip.departure|date:'Y-m-d' }}{% endif %}"
+                    {% if preselected_trip and trip.pk == preselected_trip.pk %}selected{% endif %}>{{ trip.name }}</option>
                 {% endfor %}
               </select>
             </div>
             <div>
               <label for="hu-type">نوع الرحلة</label>
               <select id="hu-type" name="hu_type">
-                <option value="عمرة">عمرة</option>
-                <option value="عمرة رمضان">عمرة رمضان</option>
-                <option value="حج">حج</option>
+                <option value="عمرة"{% if preselected_trip and preselected_trip.trip_type == 'عمرة' %} selected{% endif %}>عمرة</option>
+                <option value="عمرة رمضان"{% if preselected_trip and preselected_trip.trip_type == 'عمرة رمضان' %} selected{% endif %}>عمرة رمضان</option>
+                <option value="حج"{% if preselected_trip and preselected_trip.trip_type == 'حج' %} selected{% endif %}>حج</option>
                 <option value="غير محدد">غير محدد</option>
               </select>
             </div>
