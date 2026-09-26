@@ -15,4 +15,5 @@ urlpatterns = [
     path('track/', views.track_booking, name='track_booking'),
     path('offline/', views.offline, name='offline'),
     path('sw.js', views.service_worker, name='service_worker'),
+    path('api/chat/', views.chat_api, name='chat_api'),
 ]

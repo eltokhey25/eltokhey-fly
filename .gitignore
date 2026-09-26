@@ -1,23 +1,52 @@
-# Python
+# --- Environment / secrets (NEVER commit) ---
+.env
+.env.*
+.env.local
+.env.save
+.env.backup
+*.env
+!.env.example
+
+# --- Databases ---
+*.sqlite3
+*.sqlite3.backup
+db.sqlite3
+
+# --- Backups ---
+*.bak
+*.backup
+
+# --- Media / uploads ---
+media/
+hajj_umrah/media/
+
+# --- Collected static ---
+staticfiles/
+hajj_umrah/staticfiles/
+
+# --- Python ---
 __pycache__/
 *.py[cod]
-*.egg-info/
+*.pyc
 
-# Virtualenv
+# --- Virtualenvs ---
 venv/
-.env
+.venv/
+env/
 
-# Old PHP project backed up locally (kept out of the repo)
-_old-php-backup/
+# --- Editors / IDEs ---
+.vscode/
+.idea/
+*.swp
+*.swo
 
-# Django
-db.sqlite3
-media/
-staticfiles/
-collectedstatic/
-
-# Logs
-*.log
-
-# OS / editors
+# --- OS ---
 .DS_Store
+Thumbs.db
+
+# --- Logs ---
+*.log
+logs/
+
+# --- Old PHP project backed up locally (kept out of the repo) ---
+_old-php-backup/

@@ -123,6 +123,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'css/main.css' %}?v=3">
+  <link rel="stylesheet" href="{% static 'css/chatbot.css' %}">
   <script src="{% static 'js/main.js' %}" defer></script>
   {% block extra_js %}{% endblock %}
 </head>
@@ -300,8 +301,23 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('{% url 'core:service_worker' %}').catch(function (err) {
       console.error('Service Worker registration failed:', err);
     });
-  });
-}
+    });
+  }
 </script>
+
+<button class="chatbot-toggle" id="chatbot-toggle" aria-label="مساعد الطوخي">💬</button>
+<div class="chatbot-window" id="chatbot-window">
+  <div class="chatbot-header">
+    <div><div class="chatbot-header-title">مساعد الطوخي للحج والعمرة 🕋</div><div class="chatbot-header-subtitle">اسألني عن أي رحلة أو احجز معانا</div></div>
+    <button class="chatbot-close" id="chatbot-close">✕</button>
+  </div>
+  <div class="chatbot-messages" id="chatbot-messages"></div>
+  <div class="chatbot-quick" id="chatbot-quick"></div>
+  <div class="chatbot-input-area">
+    <input type="text" class="chatbot-input" id="chatbot-input" placeholder="اكتب سؤالك..." maxlength="500">
+    <button class="chatbot-send" id="chatbot-send">➤</button>
+  </div>
+</div>
+<script src="{% static 'js/chatbot.js' %}"></script>
 </body>
 </html>

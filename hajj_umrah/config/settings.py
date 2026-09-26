@@ -157,3 +157,6 @@ EMAIL_BACKEND = os.environ.get(
 
 # Same-origin only so the dashboard can embed the public site in a live preview iframe
 X_FRAME_OPTIONS = 'SAMEORIGIN'
+
+# --- AI Chatbot (Groq) ---
+GROQ_API_KEY = os.environ.get('GROQ_API_KEY', '')

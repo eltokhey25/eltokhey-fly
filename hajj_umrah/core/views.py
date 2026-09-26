@@ -274,3 +274,39 @@ def offline(request):
 
 def robots_txt(request):
     return TemplateResponse(request, 'robots.txt', content_type='text/plain')
+
+# --- AI Chatbot API -------------------------------------------------------
+
+import json as _json
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_exempt
+from django.core.cache import cache
+from core.chatbot import get_chatbot_response
+
+
+def _get_client_ip(request):
+    xf = request.META.get('HTTP_X_FORWARDED_FOR')
+    return xf.split(',')[0].strip() if xf else request.META.get('REMOTE_ADDR', '')
+
+
+@csrf_exempt
+@require_POST
+def chat_api(request):
+    try:
+        data = _json.loads(request.body)
+    except _json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    message = (data.get('message') or '').strip()
+    history = data.get('history', [])
+    if not message:
+        return JsonResponse({'error': 'الرسالة فاضية'}, status=400)
+    if len(message) > 500:
+        message = message[:500]
+    ip = _get_client_ip(request)
+    ck = f"chat_rate_{ip}"
+    cnt = cache.get(ck, 0)
+    if cnt >= 20:
+        return JsonResponse({'reply': 'وصلت للحد الأقصى من الرسائل. حاول بعد ساعة أو تواصل معنا على الواتساب 201095454012.'})
+    cache.set(ck, cnt + 1, 3600)
+    return JsonResponse({'reply': get_chatbot_response(message, history)})
