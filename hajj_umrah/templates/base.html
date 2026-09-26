@@ -170,6 +170,22 @@
         <li><a href="{% url 'core:track_booking' %}">تتبع حجزك</a></li>
         <li><a href="{% url 'core:about' %}">من نحن</a></li>
       </ul>
+      <button class="chat-pill" id="chatbot-toggle" type="button" aria-label="افتح المساعد الذكي" aria-expanded="false" aria-controls="chatbot-window">
+        <svg class="chat-pill-icon" viewBox="0 0 48 48" fill="none" aria-hidden="true" focusable="false">
+          <path d="M24 12v-3" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+          <circle cx="24" cy="6" r="3" fill="#f59e0b"/>
+          <rect x="9" y="12" width="30" height="25" rx="10" fill="#fff" fill-opacity=".16"/>
+          <rect x="9" y="12" width="30" height="25" rx="10" stroke="currentColor" stroke-width="2.4"/>
+          <rect x="14.5" y="19" width="19" height="8.5" rx="4.25" fill="#fff" fill-opacity=".92"/>
+          <circle cx="19.5" cy="23.25" r="2.1" fill="#0f766e"/>
+          <circle cx="28.5" cy="23.25" r="2.1" fill="#0f766e"/>
+          <path d="M20 33.5c1.2 1.4 2.5 2 4 2s2.8-.6 4-2" stroke="#f59e0b" stroke-width="2.2" stroke-linecap="round"/>
+          <rect x="4.5" y="21" width="3" height="7" rx="1.5" fill="currentColor" fill-opacity=".85"/>
+          <rect x="40.5" y="21" width="3" height="7" rx="1.5" fill="currentColor" fill-opacity=".85"/>
+        </svg>
+        <span class="chat-pill-label">مساعد ذكي</span>
+        <span class="chat-online-dot" aria-hidden="true"></span>
+      </button>
       <a class="btn btn-gold nav-cta" href="{% url 'core:booking' %}">احجز الآن</a>
     </nav>
 
@@ -306,25 +322,6 @@ if ('serviceWorker' in navigator) {
   }
 </script>
 
-<button class="chatbot-toggle" id="chatbot-toggle" type="button" aria-label="مساعد الطوخي" aria-expanded="false" aria-controls="chatbot-window">
-  <svg class="chatbot-toggle-icon" viewBox="0 0 48 48" fill="none" aria-hidden="true" focusable="false">
-    <path d="M24 12v-3" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
-    <circle cx="24" cy="6" r="3" fill="#f59e0b"/>
-    <rect x="9" y="12" width="30" height="25" rx="10" fill="#fff" fill-opacity=".16"/>
-    <rect x="9" y="12" width="30" height="25" rx="10" stroke="currentColor" stroke-width="2.4"/>
-    <rect x="14.5" y="19" width="19" height="8.5" rx="4.25" fill="#fff" fill-opacity=".92"/>
-    <circle cx="19.5" cy="23.25" r="2.1" fill="#0f766e"/>
-    <circle cx="28.5" cy="23.25" r="2.1" fill="#0f766e"/>
-    <path d="M20 33.5c1.2 1.4 2.5 2 4 2s2.8-.6 4-2" stroke="#f59e0b" stroke-width="2.2" stroke-linecap="round"/>
-    <rect x="4.5" y="21" width="3" height="7" rx="1.5" fill="currentColor" fill-opacity=".85"/>
-    <rect x="40.5" y="21" width="3" height="7" rx="1.5" fill="currentColor" fill-opacity=".85"/>
-  </svg>
-  <span class="chatbot-online-dot" aria-hidden="true"></span>
-  <span class="chatbot-teaser" id="chatbot-teaser" hidden>
-    <span class="chatbot-teaser-text">مساعد ذكي</span>
-    <button class="chatbot-teaser-close" id="chatbot-teaser-close" type="button" aria-label="إخفاء">✕</button>
-  </span>
-</button>
 <div class="chatbot-window" id="chatbot-window">
   <div class="chatbot-header">
     <div class="chatbot-header-main">

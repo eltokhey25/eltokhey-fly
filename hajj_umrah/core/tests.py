@@ -1,4 +1,5 @@
 import json
+import requests
 import os
 import re
 import tempfile
@@ -13,6 +14,8 @@ from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
 from .chatbot import (
+    GROQ_MODEL,
+    MODEL_FALLBACKS,
     _extract_action,
     _resolve_api_key,
     build_system_prompt,
@@ -571,6 +574,19 @@ class ChatbotPromptTests(TestCase):
 
 
 class ChatbotResponseTests(TestCase):
+    @staticmethod
+    def fake_response(content='ok', finish='stop'):
+        """A real requests.Response stand-in: status_code, text and json()."""
+        r = mock.Mock()
+        r.status_code = 200
+        r.text = content
+        r.json.return_value = {
+            'choices': [{'message': {'content': content}, 'finish_reason': finish}],
+            'usage': {'completion_tokens': 5},
+        }
+        r.raise_for_status.return_value = None
+        return r
+
     @override_settings(GROQ_API_KEY='')
     @mock.patch.dict(os.environ, {}, clear=True)
     def test_missing_api_key_returns_arabic_fallback(self):
@@ -581,7 +597,7 @@ class ChatbotResponseTests(TestCase):
         import requests
 
         with mock.patch('core.chatbot.requests.post', side_effect=requests.exceptions.Timeout):
-            self.assertIn('مشغول', get_chatbot_response('x'))
+            self.assertIn('بطيء', get_chatbot_response('x'))
         with mock.patch(
             'core.chatbot.requests.post',
             side_effect=requests.exceptions.RequestException('boom'),
@@ -589,20 +605,13 @@ class ChatbotResponseTests(TestCase):
             self.assertIn('201095454012', get_chatbot_response('x'))
 
     def test_successful_reply_is_returned(self):
-        payload = {'choices': [{'message': {'content': '  أهلاً بك  '}}]}
-        with mock.patch('core.chatbot.requests.post') as post:
-            post.return_value.json.return_value = payload
-            post.return_value.raise_for_status.return_value = None
+        with mock.patch('core.chatbot.requests.post', return_value=self.fake_response('  أهلاً بك  ')):
             reply = get_chatbot_response('ايش عندكم؟')
         self.assertEqual(reply, 'أهلاً بك')
 
     def test_history_is_trimmed_to_last_six(self):
         history = [{'role': 'user', 'content': f'm{i}'} for i in range(20)]
-        with mock.patch('core.chatbot.requests.post') as post:
-            post.return_value.json.return_value = {
-                'choices': [{'message': {'content': 'ok'}}]
-            }
-            post.return_value.raise_for_status.return_value = None
+        with mock.patch('core.chatbot.requests.post', return_value=self.fake_response()) as post:
             get_chatbot_response('سؤال', history)
         sent = post.call_args.kwargs['json']['messages']
         self.assertEqual(sent[0]['role'], 'system')
@@ -611,11 +620,7 @@ class ChatbotResponseTests(TestCase):
 
     def test_malformed_history_entries_are_ignored(self):
         history = ['nope', {'role': 'system', 'content': 'x'}, {'role': 'user', 'content': 'y'}]
-        with mock.patch('core.chatbot.requests.post') as post:
-            post.return_value.json.return_value = {
-                'choices': [{'message': {'content': 'ok'}}]
-            }
-            post.return_value.raise_for_status.return_value = None
+        with mock.patch('core.chatbot.requests.post', return_value=self.fake_response()) as post:
             get_chatbot_response('سؤال', history)
         sent = post.call_args.kwargs['json']['messages']
         self.assertEqual([m['role'] for m in sent], ['system', 'user', 'user'])
@@ -956,3 +961,117 @@ class ChatTripsApiTests(TestCase):
         Trip.objects.create(name='بغير سعر', slug='no-price', price='', is_active=True)
         r = self.client.get('/api/chat/trips/')
         self.assertTrue(r.json()['trips'][-1]['price_display'])
+
+
+class GroqErrorHandlingTests(TestCase):
+    """Each Groq failure mode must map to its own message and log line."""
+
+    def setUp(self):
+        cache.clear()
+        patcher = mock.patch('core.chatbot._resolve_api_key', return_value='test-key')
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def reply_for(self, side_effect=None, return_value=None):
+        with mock.patch('core.chatbot.requests.post', **({} if side_effect is None else {'side_effect': side_effect})):
+            if side_effect is None:
+                with mock.patch('core.chatbot.requests.post', return_value=return_value):
+                    return get_chatbot_response('مرحبا')
+            return get_chatbot_response('مرحبا')
+
+    def fake(self, status=200, payload=None, text=''):
+        r = mock.Mock()
+        r.status_code = status
+        r.text = text
+        r.json = mock.Mock(return_value=payload or {})
+        return r
+
+    def ok_payload(self, content='أهلاً', finish='stop'):
+        return {'choices': [{'message': {'content': content}, 'finish_reason': finish}],
+                'usage': {'completion_tokens': 10}}
+
+    def test_timeout_says_connection_is_slow(self):
+        with self.assertLogs('core.chatbot', level='ERROR') as logs:
+            reply = self.reply_for(side_effect=requests.exceptions.Timeout())
+        self.assertIn('بطيء', reply)
+        self.assertNotIn('خطأ في الإعداد', reply)
+        self.assertTrue(any('TIMEOUT' in line for line in logs.output), logs.output)
+
+    def test_401_says_configuration_error_and_stops_early(self):
+        bad = self.fake(status=401, text='{"error":{"message":"invalid api key"}}')
+        with self.assertLogs('core.chatbot', level='ERROR') as logs:
+            with mock.patch('core.chatbot.requests.post', return_value=bad) as post:
+                reply = get_chatbot_response('مرحبا')
+        self.assertIn('خطأ في الإعداد', reply)
+        self.assertEqual(post.call_count, 1, 'auth errors must not walk the fallback chain')
+        self.assertTrue(any('401' in line for line in logs.output), logs.output)
+
+    def test_transient_429_retries_the_same_model_first(self):
+        """A momentary 429 should be ridden out before giving up on a model."""
+        limited = self.fake(status=429, text='{"error":{"message":"Rate limit reached"}}')
+        good = self.fake(200, self.ok_payload())
+        with mock.patch('core.chatbot.time.sleep'):
+            with mock.patch('core.chatbot.requests.post', side_effect=[limited, good]) as post:
+                reply = get_chatbot_response('مرحبا')
+        self.assertEqual(reply, 'أهلاً')
+        used = [c.kwargs['json']['model'] for c in post.call_args_list]
+        self.assertEqual(used[0], used[1])
+
+    def test_persistent_429_escalates_to_a_different_model(self):
+        """Groq caps limits per model, so a hard 429 must change model."""
+        limited = self.fake(status=429, text='{"error":{"message":"Rate limit reached on tokens per minute"}}')
+        good = self.fake(200, self.ok_payload())
+        exhausted = [limited] * (2 + 1)  # MAX_429_RETRIES + 1
+        with mock.patch('core.chatbot.time.sleep'):
+            with mock.patch('core.chatbot.requests.post', side_effect=exhausted + [good]) as post:
+                reply = get_chatbot_response('مرحبا')
+        self.assertEqual(reply, 'أهلاً')
+        used = [c.kwargs['json']['model'] for c in post.call_args_list]
+        self.assertNotEqual(used[0], used[-1], 'persistent 429 must change model')
+
+    def test_429_exhausted_says_try_again(self):
+        limited = self.fake(status=429, text='{"error":{"message":"Rate limit reached"}}')
+        with mock.patch('core.chatbot.time.sleep'):
+            with mock.patch('core.chatbot.requests.post', return_value=limited):
+                reply = get_chatbot_response('مرحبا')
+        self.assertIn('ضغط', reply)
+        self.assertNotIn('بطيء', reply)
+
+    def test_empty_reasoning_reply_is_retried_not_shown_as_busy(self):
+        empty = self.fake(200, self.ok_payload(content='', finish='length'))
+        good = self.fake(200, self.ok_payload(content='رد كامل'))
+        with mock.patch('core.chatbot.requests.post', side_effect=[empty, good]):
+            reply = get_chatbot_response('مرحبا')
+        self.assertEqual(reply, 'رد كامل')
+
+    def test_network_exception_logs_its_type(self):
+        with self.assertLogs('core.chatbot', level='ERROR') as logs:
+            reply = self.reply_for(side_effect=requests.exceptions.ConnectionError('boom'))
+        self.assertIn('خطأ', reply)
+        self.assertTrue(any('ConnectionError' in line for line in logs.output), logs.output)
+
+    def test_malformed_json_is_a_parse_error(self):
+        r = mock.Mock()
+        r.status_code = 200
+        r.text = 'not json'
+        r.json = mock.Mock(side_effect=ValueError('bad'))
+        with self.assertLogs('core.chatbot', level='ERROR') as logs:
+            with mock.patch('core.chatbot.requests.post', return_value=r):
+                reply = get_chatbot_response('مرحبا')
+        self.assertIn('خطأ', reply)
+        self.assertTrue(any('PARSE' in line for line in logs.output), logs.output)
+
+    def test_request_uses_20s_timeout_and_larger_budget(self):
+        with mock.patch('core.chatbot.requests.post', return_value=self.fake(200, self.ok_payload())) as post:
+            get_chatbot_response('مرحبا')
+        self.assertEqual(post.call_args.kwargs['timeout'], 20)
+        self.assertEqual(post.call_args.kwargs['json']['max_tokens'], 1200)
+
+    def test_fallback_chain_is_ordered_and_usable(self):
+        """Offline guard: the primary must lead a non-empty, duplicate-free chain."""
+        self.assertTrue(MODEL_FALLBACKS)
+        self.assertEqual(MODEL_FALLBACKS[0], GROQ_MODEL)
+        self.assertEqual(len(MODEL_FALLBACKS), len(set(MODEL_FALLBACKS)))
+        for model in MODEL_FALLBACKS:
+            self.assertIsInstance(model, str)
+            self.assertNotIn(' ', model)

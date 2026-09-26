@@ -6,15 +6,11 @@
   var BOOKING_API = '/api/chat/booking/';
   var TRIPS_API = '/api/chat/trips/';
   var KEY = 'chatbot_history_v1';
-  var TEASER_KEY = 'chatbot_teaser_dismissed_at';
-  var TEASER_DELAY = 3000;
-  var TEASER_COOLDOWN = 7 * 24 * 60 * 60 * 1000;
   var MAX = 20;
 
   var history = [];
   var isOpen = false;
   var isLoading = false;
-  var teaserTimer = null;
 
   /* Booking flow state: null | 'trips' | 'form' | 'summary' | 'done' */
   var booking = null;
@@ -40,6 +36,32 @@
   function scroll() {
     var c = messagesEl();
     if (c) c.scrollTop = c.scrollHeight;
+  }
+
+  /* Any of these mean the model could not answer, so offer a human channel
+     instead of leaving the visitor at a dead end. */
+  var ERROR_MARKERS = ['مشغول', 'خطأ', 'بطيء', 'ضغط', 'غير متاح', 'تعذر', 'حصل خطأ'];
+  function isErrorText(text) {
+    for (var i = 0; i < ERROR_MARKERS.length; i++) {
+      if (String(text || '').indexOf(ERROR_MARKERS[i]) !== -1) return true;
+    }
+    return false;
+  }
+
+  function addWhatsAppButton() {
+    var c = messagesEl();
+    if (!c || c.querySelector('.chatbot-wa-help')) return;
+    var wrap = document.createElement('div');
+    wrap.className = 'chatbot-wa-help';
+    var a = document.createElement('a');
+    a.className = 'chatbot-btn wa';
+    a.href = 'https://wa.me/201095454012';
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.textContent = 'تواصل على واتساب';
+    wrap.appendChild(a);
+    c.appendChild(wrap);
+    scroll();
   }
 
   /* ---------- plain messages ---------- */
@@ -128,34 +150,6 @@
   function hideTyping() {
     var e = el('chatbot-typing');
     if (e) e.remove();
-  }
-
-  /* ---------- teaser bubble ---------- */
-
-  function teaserDismissed() {
-    try {
-      var at = parseInt(localStorage.getItem(TEASER_KEY) || '0', 10);
-      return Date.now() - at < TEASER_COOLDOWN;
-    } catch (e) { return false; }
-  }
-
-  function hideTeaser() {
-    var t = el('chatbot-teaser');
-    if (t) t.hidden = true;
-  }
-
-  function scheduleTeaser() {
-    if (teaserTimer) clearTimeout(teaserTimer);
-    teaserTimer = setTimeout(function () {
-      if (isOpen || teaserDismissed()) return;
-      var t = el('chatbot-teaser');
-      if (t) t.hidden = false;
-    }, TEASER_DELAY);
-  }
-
-  function dismissTeaser() {
-    hideTeaser();
-    try { localStorage.setItem(TEASER_KEY, String(Date.now())); } catch (e) {}
   }
 
   /* ---------- booking flow ---------- */
@@ -412,9 +406,11 @@
         hideTyping();
         if (!res.ok) {
           add('bot', (res.data && res.data.reply) || 'حصل خطأ مؤقت. حاول تاني.', false);
+          addWhatsAppButton();
           return;
         }
         add('bot', res.data.reply, true);
+        if (isErrorText(res.data.reply)) addWhatsAppButton();
         if (res.data.action === 'start_booking') {
           hideTyping();
           stepTrips();
@@ -423,6 +419,7 @@
       .catch(function () {
         hideTyping();
         add('bot', 'تعذر الاتصال. حاول تاني أو تواصل على الواتساب 201095454012.', false);
+        addWhatsAppButton();
       })
       .then(function () { isLoading = false; });
   }
@@ -433,19 +430,30 @@
     document.body.classList.toggle('chatbot-scroll-locked', !!on);
   }
 
+  function isMobile() {
+    return !!(window.matchMedia && window.matchMedia('(max-width: 768px)').matches);
+  }
+
   function open() {
     isOpen = true;
     var w = el('chatbot-window');
     var t = el('chatbot-toggle');
     if (w) w.classList.add('open');
     if (t) {
-      t.style.display = 'none';
       t.setAttribute('aria-expanded', 'true');
       t.classList.add('is-opening');
       setTimeout(function () { t.classList.remove('is-opening'); }, 520);
     }
-    if (window.matchMedia && window.matchMedia('(max-width: 768px)').matches) lockScroll(true);
+    /* The pill also lives in the mobile drawer, so shut the drawer to get it
+       out from under the fullscreen chat panel. */
+    if (isMobile()) {
+      var closeBtn = el('nav-close');
+      if (closeBtn) closeBtn.click();
+      lockScroll(true);
+    }
     render();
+    var inp = el('chatbot-input');
+    if (inp && isMobile()) setTimeout(function () { inp.focus(); }, 320);
   }
 
   function close() {
@@ -453,12 +461,8 @@
     var w = el('chatbot-window');
     var t = el('chatbot-toggle');
     if (w) w.classList.remove('open');
-    if (t) {
-      t.style.display = 'flex';
-      t.setAttribute('aria-expanded', 'false');
-    }
+    if (t) t.setAttribute('aria-expanded', 'false');
     lockScroll(false);
-    scheduleTeaser();
   }
 
   /* ---------- init ---------- */
@@ -468,11 +472,9 @@
     var closeBtn = el('chatbot-close');
     var input = el('chatbot-input');
     var sendBtn = el('chatbot-send');
-    var teaserClose = el('chatbot-teaser-close');
 
     if (toggle) toggle.onclick = open;
     if (closeBtn) closeBtn.onclick = close;
-    if (teaserClose) teaserClose.onclick = dismissTeaser;
 
     if (sendBtn) sendBtn.onclick = function () { send(input && input.value); };
     if (input) {
@@ -488,6 +490,5 @@
       if (e.key === 'Escape' && isOpen) close();
     });
 
-    scheduleTeaser();
   });
 })();
