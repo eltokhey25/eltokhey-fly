@@ -1,116 +1,170 @@
 /* Chatbot widget — emerald #0d9488 + gold #f59e0b, matching the site theme.
 
-   The launcher is a real header button (Option A), not a floating widget, so it
-   can never collide with the .fab-call / .fab-wa stack. Those sit at
-   inset-inline-end (physical LEFT in this RTL site) from 18px to 136px off the
-   bottom, which is exactly where a floating toggle used to overlap them.
+   Two surfaces, one shared thread:
+     1. A floating launcher pinned to inset-inline-start (physical RIGHT in this
+        RTL site) — deliberately opposite the call/WhatsApp FABs that main.css
+        pins to inset-inline-end — plus the desktop overlay panel above it.
+     2. /chat/, a standalone full-screen app page that the launcher navigates to
+        on <=768px, where an overlay cannot win against the soft keyboard.
 
-   Launcher design: a quiet outline pill that sits next to the gold CTA — white
-   fill, 1.5px emerald hairline, emerald label, 18px bot glyph, 14px type. It
-   inverts to a solid emerald fill on hover (pointer devices only), on :active
-   and while the panel is open (aria-expanded=true), so the open state reads
-   without the old pulsing corner dot. Height is deliberately NOT hard-coded:
-   align-self:stretch inherits the nav row height, which .nav-cta sets — the two
-   buttons stay pixel-identical even if .btn padding changes later. */
+   The launcher floats with the independent `translate` property while hover
+   and :active scale with `transform`, so both can run on one element without
+   the animation swallowing the transition. */
 
-.chat-pill {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  flex: 0 0 auto;
-  align-self: stretch;
-  min-height: 44px;
-  padding: 8px 16px;
-  border: 1.5px solid var(--primary-700, #0f766e);
-  border-radius: var(--radius-full, 999px);
+.chat-fab {
+  position: fixed;
+  inset-inline-start: 24px;
+  bottom: 24px;
+  z-index: 9998;
+  width: 60px;
+  height: 60px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0d9488, #0f766e);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(13, 148, 136, .35);
+  animation: chatbot-fab-float 3s ease-in-out infinite;
+  transition: transform .25s cubic-bezier(.22, 1, .36, 1), box-shadow .25s ease;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.chat-fab__icon { width: 22px; height: 22px; display: block; }
+/* Top-light for a little depth on the gradient. */
+.chat-fab__ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .22), rgba(255, 255, 255, 0) 58%);
+  pointer-events: none;
+}
+/* "Assistant is online" dot, top-start corner (physical right in RTL). */
+.chat-fab__dot {
+  position: absolute;
+  top: 4px;
+  inset-inline-start: 4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #4ade80;
+  border: 2px solid #fff;
+  box-sizing: border-box;
+}
+.chat-fab__dot::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  background: rgba(74, 222, 128, .6);
+  animation: chatbot-pulse 2.4s ease-out infinite;
+}
+@keyframes chatbot-fab-float {
+  0%, 100% { translate: 0 0;     }
+  50%      { translate: 0 -3px;  }
+}
+@keyframes chatbot-pulse {
+  0%        { transform: scale(1);   opacity: .65; }
+  70%, 100% { transform: scale(2.4); opacity: 0;   }
+}
+/* Hover only where a real pointer exists, so the button never stays hovered on
+   a phone after the first tap. */
+@media (hover: hover) and (pointer: fine) {
+  .chat-fab:hover {
+    transform: scale(1.06);
+    box-shadow: 0 14px 34px rgba(13, 148, 136, .45);
+  }
+  .chat-fab:hover .chat-fab__dot::after { animation-duration: 1.6s; }
+}
+.chat-fab:active { transform: scale(.96); }
+.chat-fab:focus-visible {
+  outline: 3px solid var(--gold-400, #f59e0b);
+  outline-offset: 3px;
+}
+
+/* The mobile drawer slides in from inset-inline-start, right over the launcher,
+   so it has to step aside while the drawer is open (same trick as .fab). */
+body.menu-open .chat-fab,
+body.menu-open .chat-fab__teaser {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Teaser nudge, desktop only (the JS never builds it on <=768px). */
+.chat-fab__teaser {
+  position: fixed;
+  inset-inline-start: 24px;
+  bottom: 92px;
+  z-index: 9998;
+  max-width: 250px;
+  padding: 12px 16px;
   background: #fff;
-  color: var(--primary-700, #0f766e);
-  box-shadow: 0 1px 2px rgba(15, 23, 42, .05), 0 4px 12px rgba(13, 148, 136, .10);
+  color: var(--ink, #0f172a);
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, .16);
   font-family: inherit;
   font-size: 14px;
   font-weight: 600;
-  line-height: 1;
-  white-space: nowrap;
-  cursor: pointer;
-  transition: background .2s ease, color .2s ease, border-color .2s ease, box-shadow .2s ease;
+  line-height: 1.5;
+  opacity: 0;
+  translate: 0 10px;
+  pointer-events: none;
+  transition: opacity .35s ease, translate .35s cubic-bezier(.22, 1, .36, 1);
 }
-.chat-pill-label { white-space: nowrap; }
-.chat-pill-icon {
-  width: 18px;
-  height: 18px;
-  flex: 0 0 18px;
-}
-/* 8px from the gold CTA. .main-nav's flex gap is --space-8 (32px), so the pill
-   pulls back all but 8px of the gap that separates the two buttons. */
-.chat-pill { margin-inline-end: calc(8px - var(--space-8, 32px)); }
-
-/* Hover only where a real pointer exists, otherwise the pill stays solid after
-   the first tap on touch devices. */
-@media (hover: hover) and (pointer: fine) {
-  .chat-pill:hover {
-    background: var(--primary-700, #0f766e);
-    border-color: var(--primary-700, #0f766e);
-    color: #fff;
-    box-shadow: 0 6px 16px rgba(13, 148, 136, .28);
-  }
-}
-.chat-pill:focus-visible {
-  outline: 3px solid var(--gold-400, #f59e0b);
-  outline-offset: 2px;
-}
-/* Open panel = pressed state, so the launcher never looks "off" once tapped. */
-.chat-pill[aria-expanded="true"],
-.chat-pill:active {
-  background: var(--primary-700, #0f766e);
-  border-color: var(--primary-700, #0f766e);
-  color: #fff;
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, .18);
-}
-/* Brief pop when the panel opens. */
-.chat-pill.is-opening .chat-pill-icon { animation: chatbot-burst .4s ease; }
-@keyframes chatbot-burst {
-  0%   { transform: scale(1);    }
-  40%  { transform: scale(1.18); }
-  100% { transform: scale(1);    }
+.chat-fab__teaser[hidden] { display: none; }
+.chat-fab__teaser.is-visible { opacity: 1; translate: 0 0; }
+.chat-fab__teaser::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  inset-inline-start: 26px;
+  width: 12px;
+  height: 12px;
+  background: #fff;
+  /* Physical sides: a 45° square shows only its right + bottom edges, and the
+     tail points at the launcher on the physical right. */
+  border-right: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+  transform: rotate(45deg);
 }
 
-/* The panel hangs from the header, like a dropdown. The max-height stops it
-   short of the FAB column (which reaches 136px up from the bottom) so the two
-   can never overlap on short viewports. */
+/* --- Panel (desktop overlay, anchored above the launcher) ---------------- */
+
 .chatbot-window {
   position: fixed;
-  top: 84px;
-  left: 20px;
+  inset-inline-start: 24px;
+  bottom: 100px;
+  z-index: 9999;
   width: 380px;
-  max-width: calc(100vw - 40px);
-  height: 600px;
-  max-height: calc(100vh - 260px);
+  max-width: calc(100vw - 48px);
+  height: min(620px, calc(100dvh - 140px));
   background: #fff;
-  border-radius: 20px;
-  box-shadow: 0 18px 50px rgba(15, 23, 42, .22);
+  border-radius: 22px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, .24);
   border: 1px solid #e2e8f0;
   display: none;
   flex-direction: column;
-  z-index: 9999;
   overflow: hidden;
   direction: rtl;
-  font-family: 'Cairo', sans-serif;
-  transform-origin: top left;
+  font-family: 'Cairo', var(--font, sans-serif);
+  transform-origin: bottom right;
 }
 .chatbot-window.open {
   display: flex;
-  animation: chatbot-drop .18s ease;
+  animation: chatbot-pop .22s cubic-bezier(.22, 1, .36, 1);
 }
-@keyframes chatbot-drop {
-  0%   { opacity: 0; transform: translateY(-8px) scale(.98); }
-  100% { opacity: 1; transform: translateY(0) scale(1); }
+@keyframes chatbot-pop {
+  0%   { opacity: 0; transform: translateY(10px) scale(.97); }
+  100% { opacity: 1; transform: translateY(0) scale(1);     }
 }
 
 .chatbot-header {
   background: linear-gradient(135deg, #0d9488, #0f766e);
   color: #fff;
-  padding: 16px 20px;
+  padding: 14px 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -124,15 +178,15 @@
   min-width: 0;
 }
 .chatbot-header-text { min-width: 0; }
-.chatbot-header-icon {
-  width: 34px;
-  height: 34px;
+.chatbot-header-avatar {
+  width: 38px;
+  height: 38px;
   flex-shrink: 0;
-  color: #fff;
-  background: rgba(255, 255, 255, .14);
+  display: grid;
+  place-items: center;
   border-radius: 50%;
-  padding: 4px;
-  box-sizing: content-box;
+  background: rgba(255, 255, 255, .16);
+  border: 1px solid rgba(255, 255, 255, .3);
 }
 .chatbot-header-title {
   font-weight: 700;
@@ -143,120 +197,222 @@
 }
 .chatbot-header-subtitle {
   font-size: 12px;
-  opacity: .9;
+  opacity: .92;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.chatbot-header-status {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #4ade80;
+  box-shadow: 0 0 0 3px rgba(74, 222, 128, .28);
+  flex-shrink: 0;
 }
 .chatbot-close {
-  background: rgba(255, 255, 255, .2);
-  border: none;
+  background: rgba(255, 255, 255, .18);
+  border: 1px solid rgba(255, 255, 255, .22);
   color: #fff;
   width: 32px;
   height: 32px;
   border-radius: 50%;
   cursor: pointer;
-  font-size: 18px;
+  font-size: 15px;
   flex-shrink: 0;
   font-family: inherit;
+  transition: background .2s ease;
 }
-.chatbot-close:hover { background: rgba(255, 255, 255, .32); }
+.chatbot-close:hover { background: rgba(255, 255, 255, .32); color: #fff; }
+
+/* --- Thread (shared by the panel and /chat/) ----------------------------- */
 
 .chatbot-messages {
   flex: 1;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
-  padding: 16px;
+  padding: 18px 16px;
   background: #f8fafc;
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 .chatbot-msg {
-  max-width: 82%;
-  padding: 10px 14px;
-  border-radius: 14px;
-  font-size: 14px;
-  line-height: 1.6;
+  position: relative;
+  max-width: 84%;
+  padding: 10px 14px 6px;
+  border-radius: 16px;
+  font-size: 14.5px;
+  line-height: 1.65;
   white-space: pre-wrap;
   word-wrap: break-word;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .07);
+  animation: chatbot-bubble-in .22s cubic-bezier(.22, 1, .36, 1);
 }
+@keyframes chatbot-bubble-in {
+  0%   { opacity: 0; transform: translateY(6px); }
+  100% { opacity: 1; transform: none;           }
+}
+/* Squared-off top corner = the WhatsApp-style tail. */
 .chatbot-msg.bot {
   background: #fff;
   color: #0f172a;
   border: 1px solid #e2e8f0;
   align-self: flex-start;
-  border-top-right-radius: 4px;
+  border-top-right-radius: 6px;
 }
 .chatbot-msg.user {
-  background: #0d9488;
+  background: linear-gradient(135deg, #0d9488, #0f766e);
   color: #fff;
   align-self: flex-end;
-  border-top-left-radius: 4px;
+  border-top-left-radius: 6px;
 }
-.chatbot-msg.error { background: #fef2f2; border-color: #fecaca; color: #b91c1c; }
+.chatbot-msg.error {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+.chatbot-time {
+  display: block;
+  margin-top: 3px;
+  font-size: 10.5px;
+  letter-spacing: .3px;
+  opacity: .5;
+  text-align: end;
+}
+.chatbot-msg.user .chatbot-time { opacity: .75; }
+
+/* Empty state — a face, not a blank transcript. */
+.chatbot-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 22px 12px 10px;
+}
+.chatbot-empty__art {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #0d9488;
+  background: radial-gradient(circle at 32% 26%, #ccfbf1, #e8fffb);
+  box-shadow: 0 0 0 10px rgba(13, 148, 136, .07), 0 12px 26px rgba(13, 148, 136, .18);
+  margin-bottom: 14px;
+  animation: chatbot-bob 3.4s ease-in-out infinite;
+}
+@keyframes chatbot-bob {
+  0%, 100% { transform: translateY(0);    }
+  50%      { transform: translateY(-4px); }
+}
+.chatbot-empty__title {
+  font-weight: 700;
+  font-size: 15px;
+  color: #0f172a;
+  margin-bottom: 2px;
+}
+.chatbot-empty__sub {
+  font-size: 13px;
+  color: #64748b;
+  max-width: 300px;
+  line-height: 1.6;
+}
 
 .chatbot-quick {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
   padding: 0 16px 12px;
   background: #f8fafc;
 }
 .chatbot-quick button {
   background: #fff;
-  border: 1px solid #0d9488;
+  border: 1px solid rgba(13, 148, 136, .35);
   color: #0d9488;
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 12px;
-  cursor: pointer;
+  padding: 8px 14px;
+  border-radius: 999px;
   font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .18s ease, color .18s ease, border-color .18s ease, transform .18s ease;
 }
-.chatbot-quick button:hover { background: #0d9488; color: #fff; }
+.chatbot-quick button:hover {
+  background: #0d9488;
+  border-color: #0d9488;
+  color: #fff;
+}
+.chatbot-quick button:active { transform: scale(.96); }
 
 .chatbot-input-area {
   display: flex;
-  gap: 8px;
-  padding: 12px 16px;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
   background: #fff;
   border-top: 1px solid #e2e8f0;
   flex-shrink: 0;
 }
 .chatbot-input {
   flex: 1;
+  min-width: 0;
   border: 1px solid #e2e8f0;
+  background: #f8fafc;
   border-radius: 24px;
-  padding: 10px 16px;
+  padding: 11px 16px;
   font-family: inherit;
   font-size: 14px;
+  color: #0f172a;
   outline: none;
-  min-width: 0;
+  transition: border-color .18s ease, background .18s ease, box-shadow .18s ease;
 }
-.chatbot-input:focus { border-color: #0d9488; }
+.chatbot-input:focus {
+  border-color: #0d9488;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, .13);
+}
 .chatbot-send {
-  background: #0d9488;
-  color: #fff;
-  border: none;
   width: 44px;
   height: 44px;
-  border-radius: 50%;
-  cursor: pointer;
-  font-size: 18px;
   flex-shrink: 0;
-  font-family: inherit;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0d9488, #0f766e);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(13, 148, 136, .35);
+  transition: transform .18s ease, box-shadow .18s ease;
 }
-.chatbot-send:hover { background: #0f766e; }
+/* The plane is drawn pointing right; flip it so it reads "send" in RTL. */
+.chatbot-send svg { transform: scaleX(-1); }
+@media (hover: hover) and (pointer: fine) {
+  .chatbot-send:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 22px rgba(13, 148, 136, .45);
+  }
+}
+.chatbot-send:active { transform: scale(.94); }
 
 .chatbot-typing {
+  align-self: flex-start;
   display: flex;
   gap: 4px;
-  padding: 12px 16px;
-  align-self: flex-start;
+  padding: 13px 15px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  border-top-right-radius: 6px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .07);
 }
 .chatbot-typing span {
   width: 8px;
   height: 8px;
-  background: #94a3b8;
   border-radius: 50%;
+  background: #94a3b8;
   animation: typing 1.2s infinite;
 }
 .chatbot-typing span:nth-child(2) { animation-delay: .2s; }
@@ -309,10 +465,10 @@
   border: 1px solid #0d9488;
   border-radius: 20px;
   padding: 6px 14px;
+  font-family: inherit;
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
-  font-family: inherit;
   white-space: nowrap;
 }
 .chatbot-btn:hover { background: #0f766e; }
@@ -382,36 +538,145 @@
 }
 .chatbot-success-icon { font-size: 34px; text-align: center; }
 
-/* --- Mobile ------------------------------------------------------------- */
+/* Inline "talk to a human" escape hatch shown when the model fails. */
+.chatbot-wa-help { display: flex; justify-content: center; margin: 2px 0; }
+.chatbot-btn.wa {
+  background: linear-gradient(135deg, #2ee06d, #128c7e);
+  border-color: #128c7e;
+  color: #fff;
+  text-decoration: none;
+  padding: 9px 18px;
+}
+.chatbot-btn.wa:hover { background: #128c7e; color: #fff; }
+
+/* --- /chat/ : dedicated full-screen mobile page --------------------------- */
+
+.chat-page-body {
+  position: fixed;
+  inset: 0;
+  margin: 0;
+  overflow: hidden;
+  background: #eef2f5;
+  font-family: 'Cairo', var(--font, sans-serif);
+}
+.chat-page {
+  display: flex;
+  flex-direction: column;
+  /* --chat-vh is re-pinned from visualViewport while the soft keyboard is up,
+     so the composer can never be pushed under it. */
+  height: var(--chat-vh, 100dvh);
+  background: #f8fafc;
+  overflow: hidden;
+  animation: chatbot-page-in .28s ease;
+}
+@keyframes chatbot-page-in {
+  0%   { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: none;           }
+}
+.chat-page__bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  padding: 10px 12px;
+  padding-top: calc(10px + env(safe-area-inset-top, 0px));
+  background: linear-gradient(135deg, #0d9488, #0f766e);
+  color: #fff;
+  box-shadow: 0 6px 20px rgba(13, 148, 136, .28);
+}
+.chat-page__back {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .14);
+  border: 1px solid rgba(255, 255, 255, .18);
+  color: #fff;
+  transition: background .2s ease;
+}
+.chat-page__back:hover { background: rgba(255, 255, 255, .26); color: #fff; }
+.chat-page__id { flex: 1; min-width: 0; }
+.chat-page__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.chat-page__sub {
+  margin: 1px 0 0;
+  font-size: 12px;
+  opacity: .92;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.chat-page__status {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #4ade80;
+  box-shadow: 0 0 0 3px rgba(74, 222, 128, .28);
+  flex-shrink: 0;
+}
+.chat-page__avatar {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .16);
+  border: 1px solid rgba(255, 255, 255, .32);
+}
+.chat-page .chatbot-messages { padding-bottom: 10px; }
+.chat-page .chatbot-quick { padding-bottom: 10px; }
+/* Clear the iPhone home indicator. */
+.chat-page .chatbot-input-area {
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+}
+/* Desktop visitors who land on /chat/ directly get a centred app card. */
+@media (min-width: 769px) {
+  .chat-page-body {
+    display: grid;
+    place-items: center;
+    padding: 24px;
+  }
+  .chat-page {
+    width: 100%;
+    max-width: 720px;
+    height: min(820px, 100%);
+    border-radius: 24px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 30px 70px rgba(15, 23, 42, .22);
+  }
+}
+
+/* --- Mobile -------------------------------------------------------------- */
 
 @media (max-width: 768px) {
-  /* No floating toggle on mobile, so it cannot fight the .fab stack. Inside the
-     hamburger drawer the pill becomes a full-width row — glyph and label stay on
-     one line (they were stacked and oversized before), 44px tall, centred. */
-  .chat-pill {
-    align-self: auto;
-    width: 100%;
-    height: 44px;
-    min-height: 44px;
-    margin: var(--space-2, 8px) 0 0;
-    padding: 8px 16px;
-    font-size: 14px;
+  .chat-fab {
+    width: 56px;
+    height: 56px;
+    bottom: 20px;
+    inset-inline-start: 20px;
   }
-  /* Touch devices get the press state instead of the hover state. */
-  .chat-pill:active {
-    background: var(--primary-700, #0f766e);
-    color: #fff;
-  }
+  .chat-fab__icon { width: 20px; height: 20px; }
+  /* Desktop-only nudge. */
+  .chat-fab__teaser { display: none; }
 
+  /* No-JS fallback: if the redirect to /chat/ ever fails, the panel still goes
+     full screen rather than opening as a cramped 380px card. */
   .chatbot-window {
-    top: 0;
-    right: 0;
+    inset-inline-start: 0;
     bottom: 0;
-    left: 0;
     width: 100vw;
-    height: 100vh;
     max-width: 100vw;
-    max-height: 100vh;
+    height: 100vh;
+    height: 100dvh;
     border-radius: 0;
     border: none;
     transform-origin: bottom center;
@@ -422,14 +687,14 @@
     100% { transform: translateY(0);    }
   }
 
-  .chatbot-header { padding: 12px; }
+  .chatbot-header { padding: 12px 14px; }
   .chatbot-header-title { font-size: 14px; }
   .chatbot-header-subtitle { font-size: 11px; }
-  .chatbot-header-icon { width: 28px; height: 28px; padding: 3px; }
+  .chatbot-header-avatar { width: 34px; height: 34px; }
 
   .chatbot-msg { font-size: 14px; max-width: 88%; }
   .chatbot-quick button { font-size: 12px; }
-  .chatbot-input { font-size: 14px; }
+  .chatbot-input { font-size: 16px; /* stops iOS zoom-on-focus */ }
   .chatbot-field input,
   .chatbot-field textarea { font-size: 16px; /* stops iOS zoom-on-focus */ }
 
@@ -443,41 +708,18 @@
   }
 }
 
-/* Body scroll lock while the chat covers the screen (set by chatbot.js). */
+/* Body scroll lock while the panel covers the screen (set by chatbot.js). */
 body.chatbot-scroll-locked { overflow: hidden; }
 
-/* Under 360px the label would crowd the drawer, so show the glyph alone — still
-   centred, still a full-width tap target, and the button's aria-label keeps the
-   accessible name. */
-@media (max-width: 359px) {
-  .chat-pill-label { display: none; }
-  .chat-pill { padding: 8px 12px; }
-}
-
-/* Tablet: the inline nav row is tight, so the pill trims its padding instead of
-   pushing the nav out of the container. Scoped to >=769px so it never overrides
-   the drawer sizing (and 14px label) that the block above sets. */
-@media (min-width: 769px) and (max-width: 1024px) {
-  .chat-pill {
-    padding: 8px 12px;
-    font-size: 13px;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .chat-pill-icon,
-  .chat-pill.is-opening .chat-pill-icon { animation: none; }
+  .chat-fab,
+  .chat-fab__dot::after,
+  .chat-fab__teaser,
+  .chatbot-empty__art,
+  .chatbot-msg,
   .chatbot-window,
-  .chatbot-window.open { animation: none; }
+  .chatbot-window.open,
+  .chatbot-typing span,
+  .chat-page { animation: none; }
+  .chat-fab:hover { transform: none; }
 }
-
-/* Inline "talk to a human" escape hatch shown when the model fails. */
-.chatbot-wa-help { display: flex; justify-content: center; margin: 2px 0; }
-.chatbot-btn.wa {
-  background: linear-gradient(135deg, #2ee06d, #128c7e);
-  border-color: #128c7e;
-  color: #fff;
-  text-decoration: none;
-  padding: 9px 18px;
-}
-.chatbot-btn.wa:hover { background: #128c7e; color: #fff; }

@@ -6,6 +6,9 @@
   var BOOKING_API = '/api/chat/booking/';
   var TRIPS_API = '/api/chat/trips/';
   var KEY = 'chatbot_history_v1';
+  var TEASER_KEY = 'chatbot_teaser_seen';
+  var CHAT_PAGE = '/chat/';
+  var MOBILE_MAX = 768;
   var MAX = 20;
 
   var history = [];
@@ -66,6 +69,14 @@
 
   /* ---------- plain messages ---------- */
 
+  /* "14:32" under every bubble, 24h — matches how the panel header reads. */
+  function stamp() {
+    var d = new Date();
+    var h = d.getHours();
+    var m = d.getMinutes();
+    return h + ':' + (m < 10 ? '0' + m : m);
+  }
+
   function add(role, content, store) {
     var c = messagesEl();
     if (!c) return;
@@ -75,6 +86,10 @@
       .replace(/\*\*([^*]+)\*\*/g, '$1')
       .replace(/__([^_]+)__/g, '$1')
       .replace(/^#{1,6}\s*/gm, '');
+    var t = document.createElement('span');
+    t.className = 'chatbot-time';
+    t.textContent = stamp();
+    d.appendChild(t);
     c.appendChild(d);
     if (store !== false) { history.push({ role: role, content: content }); save(); }
     scroll();
@@ -97,11 +112,33 @@
     if (d) d.remove();
   }
 
+  /* Empty state: a friendly bot plate above the welcome line, so a brand-new
+     visitor sees a face, not a bare transcript. */
+  var BOT_GLYPH =
+    '<svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" ' +
+    'stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' +
+    '<rect x="3.5" y="7.5" width="17" height="12" rx="4"/>' +
+    '<path d="M12 7.5V4.6"/><circle cx="12" cy="3.2" r="1.3" fill="currentColor" stroke="none"/>' +
+    '<path d="M9.4 12.4v1.7M14.6 12.4v1.7"/><path d="M1.8 13h2.2M22.2 13H20"/></svg>';
+
+  function emptyState() {
+    var c = messagesEl();
+    if (!c) return;
+    var wrap = document.createElement('div');
+    wrap.className = 'chatbot-empty';
+    wrap.innerHTML =
+      '<span class="chatbot-empty__art">' + BOT_GLYPH + '</span>' +
+      '<div class="chatbot-empty__title">أهلاً بيك 👋</div>' +
+      '<div class="chatbot-empty__sub">اسألني عن أي رحلة أو سعر أو موعد، وأنا معاك على مدار الساعة.</div>';
+    c.appendChild(wrap);
+  }
+
   function render() {
     var c = messagesEl();
     if (!c) return;
     c.innerHTML = '';
     if (history.length === 0) {
+      emptyState();
       add('bot',
         'السلام عليكم 🌙\nأنا مساعد الطوخي الذكي للحج والعمرة 🤖\nأقدر أساعدك في:\n' +
         '✅ اختيار الرحلة المناسبة\n✅ معرفة الأسعار والمواعيد\n✅' +
@@ -121,8 +158,9 @@
     var c = el('chatbot-quick');
     if (!c) return;
     c.innerHTML = '';
-    ['عايز أعمل عمرة', 'أسعار الحج', 'عايز أحجز', 'إزاي أحجز؟'].forEach(function (t) {
+    ['عايز أعرف الرحلات', 'عايز أحجز', 'الأسعار'].forEach(function (t) {
       var b = document.createElement('button');
+      b.type = 'button';
       b.textContent = t;
       b.onclick = function () { send(t); };
       c.appendChild(b);
@@ -424,36 +462,77 @@
       .then(function () { isLoading = false; });
   }
 
+  /* ---------- teaser bubble ---------- */
+
+  /* Desktop nudge that appears once per session, 4s after the page settles.
+     Dismissed by the 8s timer, by tapping the launcher, or by sending. */
+  function hideTeaser() {
+    var teaser = el('chatbot-teaser');
+    if (!teaser) return;
+    try { sessionStorage.setItem(TEASER_KEY, '1'); } catch (e) {}
+    teaser.classList.remove('is-visible');
+    clearTimeout(teaser._hideTimer);
+    teaser._hideTimer = setTimeout(function () { teaser.hidden = true; }, 400);
+  }
+
+  function initTeaser(toggle) {
+    var teaser = el('chatbot-teaser');
+    if (!teaser || !toggle || isMobile()) return;
+    var seen = false;
+    try { seen = sessionStorage.getItem(TEASER_KEY) === '1'; } catch (e) {}
+    if (seen) return;
+
+    var showTimer = setTimeout(function () {
+      teaser.hidden = false;
+      /* Flush layout so the opacity/translate transition has a starting frame to
+         animate from. rAF is not safe here: it is throttled in a background tab
+         and never fires at all in headless runs, which would strand the teaser
+         at opacity 0 with the timer already running. */
+      void teaser.offsetWidth;
+      teaser.classList.add('is-visible');
+      teaser._hideTimer = setTimeout(hideTeaser, 8000);
+    }, 4000);
+
+    toggle.addEventListener('click', function () {
+      clearTimeout(showTimer);
+      hideTeaser();
+    }, true);
+  }
+
   /* ---------- open / close ---------- */
 
   function lockScroll(on) {
     document.body.classList.toggle('chatbot-scroll-locked', !!on);
   }
 
+  /* Same 768px edge the CSS uses, so panel and layout never disagree. */
   function isMobile() {
-    return !!(window.matchMedia && window.matchMedia('(max-width: 768px)').matches);
+    return (window.innerWidth || 0) <= MOBILE_MAX;
+  }
+
+  /* Phones get a real page: an overlay panel cannot win against the on-screen
+     keyboard, which covers the composer and leaves half a screen of chat. */
+  function goChatPage() {
+    var toggle = el('chatbot-toggle');
+    var url = (toggle && toggle.getAttribute('data-chat-url')) || CHAT_PAGE;
+    window.location.href = url;
   }
 
   function open() {
+    if (isMobile()) { goChatPage(); return; }
     isOpen = true;
     var w = el('chatbot-window');
     var t = el('chatbot-toggle');
+    hideTeaser();
     if (w) w.classList.add('open');
     if (t) {
       t.setAttribute('aria-expanded', 'true');
       t.classList.add('is-opening');
       setTimeout(function () { t.classList.remove('is-opening'); }, 520);
     }
-    /* The pill also lives in the mobile drawer, so shut the drawer to get it
-       out from under the fullscreen chat panel. */
-    if (isMobile()) {
-      var closeBtn = el('nav-close');
-      if (closeBtn) closeBtn.click();
-      lockScroll(true);
-    }
     render();
     var inp = el('chatbot-input');
-    if (inp && isMobile()) setTimeout(function () { inp.focus(); }, 320);
+    if (inp) setTimeout(function () { inp.focus(); }, 80);
   }
 
   function close() {
@@ -484,11 +563,38 @@
           send(input.value);
         }
       });
+      /* On the standalone page keep the composer above the soft keyboard by
+         re-pinning the viewport height when it changes (iOS Safari). */
+      if (window.visualViewport) {
+        var vv = window.visualViewport;
+        var pin = function () {
+          document.documentElement.style.setProperty('--chat-vh', vv.height + 'px');
+        };
+        vv.addEventListener('resize', pin);
+        pin();
+      }
     }
 
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && isOpen) close();
     });
 
+    /* /chat/ has no launcher: render the transcript on load and make the back
+       arrow behave like a real history step. */
+    if (!toggle) {
+      render();
+      var back = document.querySelector('[data-chat-back]');
+      if (back) {
+        back.addEventListener('click', function (e) {
+          if (document.referrer && document.referrer.indexOf(location.origin) === 0 && history.length > 1) {
+            e.preventDefault();
+            history.back();
+          }
+        });
+      }
+      if (input && !isMobile()) setTimeout(function () { input.focus(); }, 120);
+    }
+
+    initTeaser(toggle);
   });
 })();

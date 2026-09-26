@@ -1,0 +1,19 @@
+{% comment %}
+Shared chat thread — the scrollable transcript, quick chips and composer.
+Included by both the desktop overlay panel (chatbot/widget.html) and the
+dedicated mobile page (chat_page.html) so the two never drift apart. IDs are
+fixed because chatbot.js addresses them directly; only one copy is ever on a
+page.
+{% endcomment %}
+<div class="chatbot-messages" id="chatbot-messages" role="log" aria-live="polite" aria-label="محادثة المساعد الذكي"></div>
+<div class="chatbot-quick" id="chatbot-quick" aria-label="اقتراحات سريعة"></div>
+<div class="chatbot-input-area">
+  <input type="text" class="chatbot-input" id="chatbot-input" placeholder="اكتب سؤالك..."
+         maxlength="500" autocomplete="off" enterkeyhint="send" aria-label="اكتب رسالتك">
+  <button class="chatbot-send" id="chatbot-send" type="button" aria-label="إرسال">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
+         stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+      <path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4Z"/>
+    </svg>
+  </button>
+</div>

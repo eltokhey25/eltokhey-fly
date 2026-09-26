@@ -95,6 +95,49 @@ class PageViewTests(TestCase):
         self.assertEqual(resp2.status_code, 404)
 
 
+class ChatPageTests(TestCase):
+    """The mobile chat is a real page the floating launcher navigates to."""
+
+    def setUp(self):
+        SiteSettings.load()
+
+    def test_chat_page_renders_thread(self):
+        resp = self.client.get(reverse('core:chat_page'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'مساعد الطوخي الذكي')
+        for hook in ('id="chatbot-messages"', 'id="chatbot-input"', 'id="chatbot-send"'):
+            self.assertContains(resp, hook)
+
+    def test_chat_page_is_a_standalone_shell(self):
+        """No site header/footer, and it must not be indexed: the transcript is
+        built by JS, so a crawler would only ever see an empty page."""
+        resp = self.client.get(reverse('core:chat_page'))
+        self.assertNotContains(resp, 'site-header')
+        self.assertNotContains(resp, 'site-footer')
+        self.assertContains(resp, 'noindex')
+
+    def test_chat_page_has_csrf_token_for_the_api(self):
+        """chatbot.js posts to /api/chat/ with the token from this page."""
+        resp = self.client.get(reverse('core:chat_page'))
+        self.assertContains(resp, 'name="csrf-token"')
+
+    def test_launcher_lives_on_every_page_and_points_at_the_chat_page(self):
+        """The floating button is in the shared widget, so it is on the home
+        page too, and it hands the mobile path to the JS."""
+        resp = self.client.get(reverse('core:home'))
+        self.assertContains(resp, 'chat-fab')
+        self.assertContains(resp, 'id="chatbot-toggle"')
+        self.assertContains(resp, 'data-chat-url="%s"' % reverse('core:chat_page'))
+
+    def test_chat_button_is_not_in_the_header(self):
+        """It was pulled out of the nav; it must not creep back in."""
+        resp = self.client.get(reverse('core:home'))
+        html = resp.content.decode()
+        header = html[html.index('<header'):html.index('</header>')]
+        self.assertNotIn('chatbot-toggle', header)
+        self.assertNotIn('chat-fab', header)
+
+
 @override_settings(DEBUG=False)
 class NotFoundTests(TestCase):
     def test_custom_404(self):

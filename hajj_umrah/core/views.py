@@ -287,6 +287,16 @@ def offline(request):
     return render(request, 'offline.html')
 
 
+def chat_page(request):
+    """Full-screen mobile chat (app-like, no header/footer).
+
+    The floating launcher redirects here on <=768px, where an overlay panel
+    fights the on-screen keyboard. It is a JS-rendered shell, so it is served
+    noindex from its own <meta> and adds nothing to the sitemap.
+    """
+    return render(request, 'chat_page.html')
+
+
 def robots_txt(request):
     return TemplateResponse(request, 'robots.txt', content_type='text/plain')
 

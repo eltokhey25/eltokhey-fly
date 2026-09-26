@@ -1,0 +1,55 @@
+{% load static %}
+{% comment %}
+Floating AI launcher + desktop overlay panel.
+
+The launcher lives at inset-inline-start (physical RIGHT in this RTL site) so it
+never fights the call/WhatsApp FABs, which main.css pins to inset-inline-end
+(physical left). On <=768px chatbot.js sends the visitor to the dedicated
+/chat/ page instead of opening this panel; the panel's full-screen mobile block
+stays as a no-JS fallback.
+{% endcomment %}
+
+<button class="chat-fab" id="chatbot-toggle" type="button"
+        data-chat-url="{% url 'core:chat_page' %}"
+        aria-label="افتح المساعد الذكي" aria-expanded="false" aria-controls="chatbot-window">
+  <span class="chat-fab__ring" aria-hidden="true"></span>
+  <svg class="chat-fab__icon" viewBox="0 0 24 24" width="22" height="22" fill="none"
+       stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"
+       aria-hidden="true" focusable="false">
+    <rect x="3.5" y="7.5" width="17" height="12" rx="4"/>
+    <path d="M12 7.5V4.6"/>
+    <circle cx="12" cy="3.2" r="1.3" fill="currentColor" stroke="none"/>
+    <path d="M9.4 12.4v1.7M14.6 12.4v1.7"/>
+    <path d="M1.8 13h2.2M22.2 13H20"/>
+  </svg>
+  <span class="chat-fab__dot" aria-hidden="true"></span>
+</button>
+
+<div class="chat-fab__teaser" id="chatbot-teaser" role="status" hidden>
+  <span>👋 محتاج مساعدة؟ اسألني!</span>
+</div>
+
+<div class="chatbot-window" id="chatbot-window" role="dialog" aria-label="المساعد الذكي">
+  <div class="chatbot-header">
+    <div class="chatbot-header-main">
+      <span class="chatbot-header-avatar" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
+             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+          <rect x="3.5" y="7.5" width="17" height="12" rx="4"/>
+          <path d="M12 7.5V4.6"/>
+          <circle cx="12" cy="3.2" r="1.3" fill="currentColor" stroke="none"/>
+          <path d="M9.4 12.4v1.7M14.6 12.4v1.7"/>
+          <path d="M1.8 13h2.2M22.2 13H20"/>
+        </svg>
+      </span>
+      <div class="chatbot-header-text">
+        <div class="chatbot-header-title">مساعد الطوخي الذكي</div>
+        <div class="chatbot-header-subtitle">
+          <span class="chatbot-header-status" aria-hidden="true"></span> متاح 24/7 — رد فوري
+        </div>
+      </div>
+    </div>
+    <button class="chatbot-close" id="chatbot-close" type="button" aria-label="إغلاق">✕</button>
+  </div>
+  {% include 'chatbot/thread.html' %}
+</div>
