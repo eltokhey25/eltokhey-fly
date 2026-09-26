@@ -512,13 +512,21 @@ class ChatbotPromptTests(TestCase):
         self.assertIn('رحلة منشورة', block)
         self.assertNotIn('رحلة مخفية', block)
 
-    def test_blank_fields_are_omitted_not_printed_as_none(self):
+    def test_blank_fields_are_labelled_not_printed_as_none(self):
         Trip.objects.create(name='ناقصة', slug='chat-blank', is_active=True)
         block = self._trips_block()
         self.assertNotIn('None', block)
-        self.assertNotIn('جنيه', block)
-        self.assertNotIn('مكان', block)
-        self.assertIn('- ناقصة | النوع: العمرة', block)
+        self.assertIn('- ناقصة | النوع: العمرة | السعر: قريباً (تواصل معنا)', block)
+        self.assertIn('المدة: غير محدد', block)
+        self.assertIn('الانطلاق: غير محدد', block)
+        self.assertIn('العودة: غير محدد', block)
+        self.assertIn('الأماكن: متاح', block)
+
+    def test_priceless_trip_is_still_listed_with_its_name_and_type(self):
+        """A trip with no price must stay visible, not be dropped."""
+        Trip.objects.create(name='بلا سعر', slug='chat-noprice', is_active=True)
+        block = self._trips_block()
+        self.assertIn('بلا سعر', block)
 
     def test_duration_unit_is_not_duplicated(self):
         Trip.objects.create(
@@ -531,6 +539,22 @@ class ChatbotPromptTests(TestCase):
         self.assertIn('المدة: 15 يوم', block)
         self.assertIn('المدة: 7 يوم', block)
         self.assertNotIn('يوم يوم', block)
+
+    def test_seeded_dates_are_formatted_iso(self):
+        Trip.objects.create(
+            name='مواعيد', slug='chat-dates', is_active=True,
+            departure='2026-12-10', return_date='2026-12-24', remaining=15,
+        )
+        block = self._trips_block()
+        self.assertIn('الانطلاق: 2026-12-10', block)
+        self.assertIn('العودة: 2026-12-24', block)
+        self.assertIn('الأماكن: 15 مكان', block)
+
+    def test_prompt_tells_model_not_to_invent_a_price(self):
+        prompt = build_system_prompt()
+        self.assertIn('لو الرحلة ليس لها سعر محدد', prompt)
+        self.assertIn('السعر قريباً', prompt)
+        self.assertIn('201095454012', prompt)
 
     def test_no_active_trips_falls_back_to_placeholder(self):
         block = self._trips_block()
@@ -702,3 +726,37 @@ class ChatApiTests(TestCase):
                 ]
         self.assertEqual(codes[:2], [200, 200])
         self.assertEqual(codes[2:], [429, 429])
+
+
+class PriceDisplayTests(TestCase):
+    """Every price surface (card, detail page, dashboard) reads price_display."""
+
+    def test_missing_price_reads_as_coming_soon(self):
+        self.assertEqual(Trip(name='x').price_display, 'السعر قريباً')
+
+    def test_numeric_price_keeps_thousands_separator(self):
+        self.assertEqual(Trip(name='x', price='37900').price_display, '37,900 ج.م')
+
+    def test_free_text_price_is_shown_verbatim(self):
+        self.assertEqual(Trip(name='x', price='قريبا').price_display, 'قريبا')
+
+    def test_templates_render_coming_soon_for_priceless_trip(self):
+        Trip.objects.all().delete()
+        trip = Trip.objects.create(
+            name='رحلة بلا سعر', slug='pd-1', is_active=True, price='',
+        )
+        for url in (
+            reverse('core:home'),
+            reverse('core:trips'),
+            reverse('core:trip_detail', args=[trip.slug]),
+        ):
+            html = self.client.get(url).content.decode()
+            self.assertIn('السعر قريباً', html, url)
+            self.assertNotIn('اكتب لنا', html, url)
+
+    def test_missing_dates_degrade_gracefully(self):
+        Trip.objects.all().delete()
+        trip = Trip.objects.create(name='بلا مواعيد', slug='pd-2', is_active=True)
+        html = self.client.get(reverse('core:trip_detail', args=[trip.slug])).content.decode()
+        self.assertIn('قريباً', html)
+        self.assertNotIn(' departures', html)

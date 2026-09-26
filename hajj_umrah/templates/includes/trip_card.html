@@ -25,7 +25,7 @@
     </div>
 
     <div class="trip-meta">
-      {% if trip.departure %}<span>📅 {{ trip.departure|date:"Y-m-d" }}</span>{% endif %}
+      {% if trip.departure %}<span>📅 {{ trip.departure|date:"Y-m-d" }}</span>{% else %}<span>📅 التاريخ قريباً</span>{% endif %}
       {% if trip.duration %}<span>⏱ {{ trip.duration }}</span>{% endif %}
       <span>📍 مكة المكرمة</span>
       {% if trip.transport %}<span>🚌 {{ trip.transport }}</span>{% endif %}

@@ -62,8 +62,8 @@
     <h1>{{ trip.name }}</h1>
     <span class="trip-type-badge badge-{{ trip.trip_type }}">{{ trip.get_trip_type_display }}</span>
     <div class="trip-hero-badges">
-      {% if trip.departure %}<span>📅 الخروج: {{ trip.departure|date:"Y-m-d" }}</span>{% endif %}
-      {% if trip.return_date %}<span>↩️ العودة: {{ trip.return_date|date:"Y-m-d" }}</span>{% endif %}
+      {% if trip.departure %}<span>📅 الخروج: {{ trip.departure|date:"Y-m-d" }}</span>{% else %}<span>📅 تاريخ الخروج: قريباً</span>{% endif %}
+      {% if trip.return_date %}<span>↩️ العودة: {{ trip.return_date|date:"Y-m-d" }}</span>{% else %}<span>↩️ تاريخ العودة: قريباً</span>{% endif %}
       {% if trip.duration %}<span>⏱ المدة: {{ trip.duration }}</span>{% endif %}
       {% if trip.transport %}<span>🚌 {{ trip.transport }}</span>{% endif %}
     </div>
@@ -133,8 +133,8 @@
       <h3>خلاصة الرحلة</h3>
       <ul class="summary-list">
         <li><span>النوع</span><strong>{{ trip.get_trip_type_display }}</strong></li>
-        {% if trip.departure %}<li><span>تاريخ الخروج</span><strong>{{ trip.departure|date:"Y-m-d" }}</strong></li>{% endif %}
-        {% if trip.return_date %}<li><span>تاريخ العودة</span><strong>{{ trip.return_date|date:"Y-m-d" }}</strong></li>{% endif %}
+        {% if trip.departure %}<li><span>تاريخ الخروج</span><strong>{{ trip.departure|date:"Y-m-d" }}</strong></li>{% else %}<li><span>تاريخ الخروج</span><strong>قريباً</strong></li>{% endif %}
+        {% if trip.return_date %}<li><span>تاريخ العودة</span><strong>{{ trip.return_date|date:"Y-m-d" }}</strong></li>{% else %}<li><span>تاريخ العودة</span><strong>قريباً</strong></li>{% endif %}
         {% if trip.duration %}<li><span>المدة</span><strong>{{ trip.duration }}</strong></li>{% endif %}
         {% if trip.transport %}<li><span>النقل</span><strong>{{ trip.transport }}</strong></li>{% endif %}
         {% if trip.capacity is not None %}<li><span>السعة</span><strong>{{ trip.capacity }} شخص</strong></li>{% endif %}

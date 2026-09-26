@@ -133,7 +133,7 @@ class Trip(models.Model):
     @property
     def price_display(self):
         if not self.price:
-            return 'اكتب لنا'
+            return 'السعر قريباً'
         text = str(self.price).strip()
         if text.isdigit():
             return f'{int(text):,} ج.م'

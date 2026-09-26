@@ -40,40 +40,24 @@ def _format_duration(value):
     return text if 'يوم' in text else f'{text} يوم'
 
 
-def _trip_line(trip):
-    """Build one prompt line for a trip, skipping fields the admin left blank.
-
-    Price, duration, dates and seats are all optional on ``Trip``. Printing an
-    unset value would put "None" or an empty label into the prompt, which the
-    model then happily quotes back to customers as fact.
-    """
-    type_label = (
-        trip.get_trip_type_display()
-        if hasattr(trip, 'get_trip_type_display')
-        else trip.trip_type
-    )
-    parts = [f"- {trip.name}", f"النوع: {type_label}"]
-    if trip.price:
-        parts.append(f"السعر: {trip.price} جنيه")
-    duration = _format_duration(trip.duration)
-    if duration:
-        parts.append(f"المدة: {duration}")
-    if trip.departure:
-        parts.append(f"الانطلاق: {trip.departure}")
-    if trip.return_date:
-        parts.append(f"العودة: {trip.return_date}")
-    if trip.remaining is not None:
-        parts.append(f"متاح: {trip.remaining} مكان")
-    return ' | '.join(parts)
-
-
 def build_system_prompt():
     """Build the strict system prompt with current trips."""
     trips = Trip.objects.filter(is_active=True).order_by('order', '-created_at')
 
-    trips_text = "\n".join(
-        _trip_line(t) for t in trips
-    ) or "لا توجد رحلات متاحة حالياً."
+    trips_list = []
+    for t in trips:
+        tt = t.get_trip_type_display() if hasattr(t, 'get_trip_type_display') else getattr(t, 'trip_type', '')
+        price_text = f"{t.price} جنيه" if t.price else "قريباً (تواصل معنا)"
+        duration_text = _format_duration(t.duration) or "غير محدد"
+        departure_text = t.departure.strftime('%Y-%m-%d') if t.departure else "غير محدد"
+        return_text = t.return_date.strftime('%Y-%m-%d') if t.return_date else "غير محدد"
+        remaining_text = f"{t.remaining} مكان" if t.remaining is not None else "متاح"
+        trips_list.append(
+            f"- {t.name} | النوع: {tt} | السعر: {price_text} | المدة: {duration_text} "
+            f"| الانطلاق: {departure_text} | العودة: {return_text} | الأماكن: {remaining_text}"
+        )
+
+    trips_text = "\n".join(trips_list) if trips_list else "لا توجد رحلات متاحة حالياً."
 
     prompt = f"""أنت "مساعد الطوخي للحج والعمرة" — مساعد ذكي متخصص ONLY في:
 - رحلات الحج والعمرة المتاحة على موقعنا
@@ -97,6 +81,10 @@ def build_system_prompt():
 
 5. لا تخترع رحلات أو أسعار أو مواعيد غير موجودة في القائمة دي. لو حقل
 فارغ في أي رحلة، لا تخمّنه — قل إنه يُحدَّد لاحقاً أو اسأل العميل على الواتساب.
+
+5.a. لو الرحلة ليس لها سعر محدد، اذكر "السعر قريباً" ولا تخترع سعراً.
+
+5.b. ادعُ المستخدم للتواصل على الواتساب 201095454012 لمعرفة السعر.
 
 === الرحلات المتاحة حالياً ===
 {trips_text}
