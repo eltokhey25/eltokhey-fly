@@ -1,10 +1,15 @@
+import json
+import os
+import re
 from unittest import mock
 from urllib.parse import unquote
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase, override_settings
+from django.core.cache import cache
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
+from .chatbot import build_system_prompt, get_chatbot_response
 from .models import Booking, BookingStatus, Review, ReviewStatus, SiteSettings, Trip
 
 
@@ -483,3 +488,217 @@ class TripPublicOrderingTests(TestCase):
         self.assertIn('الرحلة الأولى', html)
         self.assertNotIn('الرحلة الثانية', html)
         self.assertIn('الرحلة الثالثة', html)
+
+
+class ChatbotPromptTests(TestCase):
+    """The prompt is customer-facing data: no blanks, no 'None', no dup units."""
+
+    def setUp(self):
+        # 0002_seed_data creates demo trips; the assertions below are about
+        # exactly which trips end up in the prompt, so start from a clean slate.
+        Trip.objects.all().delete()
+
+    def _trips_block(self):
+        prompt = build_system_prompt()
+        return prompt[prompt.index('=== الرحلات'):prompt.index('=== نهاية')]
+
+    def test_inactive_trips_are_excluded(self):
+        Trip.objects.create(
+            name='رحلة منشورة', slug='chat-on', is_active=True,
+            price='1000', duration='5 يوم',
+        )
+        Trip.objects.create(name='رحلة مخفية', slug='chat-off', is_active=False)
+        block = self._trips_block()
+        self.assertIn('رحلة منشورة', block)
+        self.assertNotIn('رحلة مخفية', block)
+
+    def test_blank_fields_are_omitted_not_printed_as_none(self):
+        Trip.objects.create(name='ناقصة', slug='chat-blank', is_active=True)
+        block = self._trips_block()
+        self.assertNotIn('None', block)
+        self.assertNotIn('جنيه', block)
+        self.assertNotIn('مكان', block)
+        self.assertIn('- ناقصة | النوع: العمرة', block)
+
+    def test_duration_unit_is_not_duplicated(self):
+        Trip.objects.create(
+            name='مكتوبة', slug='chat-dur-1', is_active=True, duration='15 يوم'
+        )
+        Trip.objects.create(
+            name='رقمية', slug='chat-dur-2', is_active=True, duration='7'
+        )
+        block = self._trips_block()
+        self.assertIn('المدة: 15 يوم', block)
+        self.assertIn('المدة: 7 يوم', block)
+        self.assertNotIn('يوم يوم', block)
+
+    def test_no_active_trips_falls_back_to_placeholder(self):
+        block = self._trips_block()
+        self.assertIn('لا توجد رحلات متاحة', block)
+
+
+class ChatbotResponseTests(TestCase):
+    @override_settings(GROQ_API_KEY='')
+    @mock.patch.dict(os.environ, {}, clear=True)
+    def test_missing_api_key_returns_arabic_fallback(self):
+        reply = get_chatbot_response('ايش عندكم؟')
+        self.assertIn('201095454012', reply)
+
+    def test_timeout_and_error_return_fallbacks(self):
+        import requests
+
+        with mock.patch('core.chatbot.requests.post', side_effect=requests.exceptions.Timeout):
+            self.assertIn('مشغول', get_chatbot_response('x'))
+        with mock.patch(
+            'core.chatbot.requests.post',
+            side_effect=requests.exceptions.RequestException('boom'),
+        ):
+            self.assertIn('201095454012', get_chatbot_response('x'))
+
+    def test_successful_reply_is_returned(self):
+        payload = {'choices': [{'message': {'content': '  أهلاً بك  '}}]}
+        with mock.patch('core.chatbot.requests.post') as post:
+            post.return_value.json.return_value = payload
+            post.return_value.raise_for_status.return_value = None
+            reply = get_chatbot_response('ايش عندكم؟')
+        self.assertEqual(reply, 'أهلاً بك')
+
+    def test_history_is_trimmed_to_last_six(self):
+        history = [{'role': 'user', 'content': f'm{i}'} for i in range(20)]
+        with mock.patch('core.chatbot.requests.post') as post:
+            post.return_value.json.return_value = {
+                'choices': [{'message': {'content': 'ok'}}]
+            }
+            post.return_value.raise_for_status.return_value = None
+            get_chatbot_response('سؤال', history)
+        sent = post.call_args.kwargs['json']['messages']
+        self.assertEqual(sent[0]['role'], 'system')
+        self.assertEqual(len(sent), 8)  # system + 6 history + user
+        self.assertEqual(sent[-1]['content'], 'سؤال')
+
+    def test_malformed_history_entries_are_ignored(self):
+        history = ['nope', {'role': 'system', 'content': 'x'}, {'role': 'user', 'content': 'y'}]
+        with mock.patch('core.chatbot.requests.post') as post:
+            post.return_value.json.return_value = {
+                'choices': [{'message': {'content': 'ok'}}]
+            }
+            post.return_value.raise_for_status.return_value = None
+            get_chatbot_response('سؤال', history)
+        sent = post.call_args.kwargs['json']['messages']
+        self.assertEqual([m['role'] for m in sent], ['system', 'user', 'user'])
+
+
+class ChatApiTests(TestCase):
+    def setUp(self):
+        cache.clear()
+        self.url = reverse('core:chat_api')
+        # The chatbot endpoint must keep CSRF protection, and Django's default
+        # test client silently bypasses it, so use a strict one here.
+        self.client = Client(enforce_csrf_checks=True)
+        Trip.objects.create(
+            name='رحلة', slug='api-trip', is_active=True, price='1000', duration='5 يوم'
+        )
+
+    def _prime_csrf(self):
+        """Load a page so Django sets the csrftoken cookie, like a real visitor."""
+        self.client.get(reverse('core:home'))
+        return self.client.cookies['csrftoken'].value
+
+    def _post(self, payload=None, csrf=True, **extra):
+        if csrf:
+            extra.setdefault('HTTP_X_CSRFTOKEN', self._prime_csrf())
+        return self.client.post(
+            self.url,
+            data=json.dumps(payload if payload is not None else {'message': 'مرحبا'}),
+            content_type='application/json',
+            **extra,
+        )
+
+    def test_post_without_csrf_token_is_rejected(self):
+        """CSRF must stay on: otherwise any site can spend our Groq credits."""
+        with mock.patch('core.views.get_chatbot_response', return_value='ok') as call:
+            resp = self._post(csrf=False)
+        self.assertEqual(resp.status_code, 403)
+        call.assert_not_called()
+
+    def test_post_with_csrf_token_is_accepted(self):
+        with mock.patch('core.views.get_chatbot_response', return_value='أهلاً') as call:
+            resp = self._post()
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()['reply'], 'أهلاً')
+        call.assert_called_once()
+
+    def test_get_is_not_allowed(self):
+        self.assertEqual(self.client.get(self.url).status_code, 405)
+
+    def test_page_exposes_csrf_token_for_the_widget(self):
+        """chatbot.js reads meta[name=csrf-token]; without it every user 403s."""
+        html = self.client.get(reverse('core:home')).content.decode()
+        match = re.search(r'<meta name="csrf-token" content="([^"]+)"', html)
+        self.assertIsNotNone(match, 'csrf-token meta tag missing from base.html')
+        # Mirror the browser exactly: token from the page, sent as X-CSRFToken.
+        with mock.patch('core.views.get_chatbot_response', return_value='أهلاً'):
+            resp = self.client.post(
+                self.url,
+                data=json.dumps({'message': 'مرحبا'}),
+                content_type='application/json',
+                HTTP_X_CSRFTOKEN=match.group(1),
+            )
+        self.assertEqual(resp.status_code, 200)
+
+    def test_empty_and_malformed_bodies_are_rejected(self):
+        token = self._prime_csrf()
+        with mock.patch('core.views.get_chatbot_response') as call:
+            self.assertEqual(self._post({'message': '   '}).status_code, 400)
+            self.assertEqual(self._post({}).status_code, 400)
+            for body in ('not json', '[1,2]', '"a string"'):
+                resp = self.client.post(
+                    self.url,
+                    data=body,
+                    content_type='application/json',
+                    HTTP_X_CSRFTOKEN=token,
+                )
+                self.assertEqual(resp.status_code, 400, body)
+        call.assert_not_called()
+
+    def test_per_ip_cap_is_enforced(self):
+        with mock.patch('core.views.get_chatbot_response', return_value='أهلاً'):
+            with override_settings(CHAT_RATE_LIMIT_PER_HOUR=3):
+                codes = [self._post(REMOTE_ADDR='1.2.3.4').status_code for _ in range(5)]
+        self.assertEqual(codes[:3], [200, 200, 200])
+        self.assertEqual(codes[3:], [429, 429])
+
+    def test_spoofed_x_forwarded_for_does_not_reset_the_cap(self):
+        """A client-supplied XFF must not hand out a fresh quota per request.
+
+        Behind the proxy the header arrives as "<anything the client sent>,
+        <address the proxy appended>". Only the right-most entry is trusted, so
+        every one of these requests shares the real visitor's single bucket.
+        """
+        with mock.patch('core.views.get_chatbot_response', return_value='أهلاً'):
+            with override_settings(CHAT_RATE_LIMIT_PER_HOUR=2):
+                for i in range(4):
+                    self._post(
+                        HTTP_X_FORWARDED_FOR=f'6.6.6.{i}, 1.2.3.4',
+                        REMOTE_ADDR='10.0.0.1',
+                    )
+        self.assertEqual(cache.get('chat_ip_1.2.3.4'), 4)
+        self.assertIsNone(cache.get('chat_ip_6.6.6.0'))
+
+    def test_untrusted_proxy_falls_back_to_remote_addr(self):
+        with mock.patch('core.views.get_chatbot_response', return_value='أهلاً'):
+            with override_settings(TRUST_X_FORWARDED_FOR=False):
+                self._post(HTTP_X_FORWARDED_FOR='6.6.6.6', REMOTE_ADDR='1.2.3.4')
+        self.assertEqual(cache.get('chat_ip_1.2.3.4'), 1)
+        self.assertIsNone(cache.get('chat_ip_6.6.6.6'))
+
+    def test_global_cap_bounds_total_spend(self):
+        with mock.patch('core.views.get_chatbot_response', return_value='أهلاً'):
+            with override_settings(
+                CHAT_RATE_LIMIT_PER_HOUR=100, CHAT_RATE_LIMIT_GLOBAL_PER_HOUR=2
+            ):
+                codes = [
+                    self._post(REMOTE_ADDR=f'10.0.0.{i}').status_code for i in range(4)
+                ]
+        self.assertEqual(codes[:2], [200, 200])
+        self.assertEqual(codes[2:], [429, 429])

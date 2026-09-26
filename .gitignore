@@ -24,6 +24,10 @@ hajj_umrah/media/
 staticfiles/
 hajj_umrah/staticfiles/
 
+# --- Local cache (rate-limit counters) ---
+cache/
+hajj_umrah/cache/
+
 # --- Python ---
 __pycache__/
 *.py[cod]

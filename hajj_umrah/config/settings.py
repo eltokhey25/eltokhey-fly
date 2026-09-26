@@ -134,6 +134,16 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = os.environ.get('DJANGO_MEDIA_ROOT', str(BASE_DIR / 'media'))
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# The default LocMemCache is per-process, so with `gunicorn --workers 2` each
+# worker would keep its own rate-limit counters and double the effective cap.
+# A file-backed cache is shared by every worker on the host.
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.filebased.FileBasedCache',
+        'LOCATION': os.environ.get('DJANGO_CACHE_ROOT', str(BASE_DIR / 'cache')),
+    }
+}
+
 EMAIL_HOST = os.environ.get('EMAIL_HOST', 'localhost')
 EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
 EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'true').lower() in {'1', 'true', 'yes', 'on'}
@@ -160,3 +170,21 @@ X_FRAME_OPTIONS = 'SAMEORIGIN'
 
 # --- AI Chatbot (Groq) ---
 GROQ_API_KEY = os.environ.get('GROQ_API_KEY', '')
+
+# The chatbot widget posts to /api/chat/ from every visitor, so the endpoint is
+# rate limited. These caps bound how much Groq spend a single visitor (or the
+# site as a whole) can generate per hour.
+CHAT_RATE_LIMIT_PER_HOUR = int(os.environ.get('CHAT_RATE_LIMIT_PER_HOUR', '20'))
+CHAT_RATE_LIMIT_GLOBAL_PER_HOUR = int(
+    os.environ.get('CHAT_RATE_LIMIT_GLOBAL_PER_HOUR', '300')
+)
+
+# Deployed behind a proxy (fly.io), so request.META['REMOTE_ADDR'] is the proxy,
+# not the visitor. When this is on we read the client IP from the *right-most*
+# X-Forwarded-For entry, which is the one our own proxy appends — a
+# client-supplied X-Forwarded-For is only ever further left, so it cannot forge
+# the value we key on. Turn off if the app is ever exposed without a proxy.
+TRUST_X_FORWARDED_FOR = os.environ.get(
+    'DJANGO_TRUST_X_FORWARDED_FOR', 'True'
+).lower() in {'1', 'true', 'yes', 'on'}
+

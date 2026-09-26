@@ -1,18 +1,22 @@
+import json
 import logging
 import re
 from datetime import timedelta
 from urllib.parse import quote
 
 from django.conf import settings
+from django.core.cache import cache
 from django.core.mail import send_mail
 from django.core.paginator import Paginator
 from django.contrib import messages
 from django.db.models import Q
-from django.http import Http404, HttpResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.response import TemplateResponse
 from django.utils import timezone
+from django.views.decorators.http import require_POST
 
+from .chatbot import MAX_MESSAGE_LENGTH, get_chatbot_response
 from .forms import ReviewForm
 from .models import Booking, BookingStatus, Review, ReviewStatus, SiteSettings, Trip
 from .whatsapp import (
@@ -23,6 +27,11 @@ from .whatsapp import (
 )
 
 logger = logging.getLogger(__name__)
+
+CHAT_RATE_LIMIT_MESSAGE = (
+    'وصلت للحد الأقصى من الرسائل. حاول بعد ساعة أو تواصل معنا على '
+    'الواتساب 201095454012.'
+)
 
 
 def _wa_trip_href(whatsapp, trip_name):
@@ -275,38 +284,64 @@ def offline(request):
 def robots_txt(request):
     return TemplateResponse(request, 'robots.txt', content_type='text/plain')
 
+
 # --- AI Chatbot API -------------------------------------------------------
 
-import json as _json
-from django.http import JsonResponse
-from django.views.decorators.http import require_POST
-from django.views.decorators.csrf import csrf_exempt
-from django.core.cache import cache
-from core.chatbot import get_chatbot_response
+
+def _client_ip(request):
+    """Best-effort client IP for rate limiting.
+
+    Never trust the left-most X-Forwarded-For entry: that is client-supplied
+    and trivially spoofable to dodge the limit. Behind a single trusted proxy
+    the real client address is the right-most entry the proxy appended.
+    """
+    if settings.TRUST_X_FORWARDED_FOR:
+        forwarded = request.META.get('HTTP_X_FORWARDED_FOR', '')
+        if forwarded:
+            candidate = forwarded.rsplit(',', 1)[-1].strip()
+            if candidate:
+                return candidate
+    return request.META.get('REMOTE_ADDR', '') or 'unknown'
 
 
-def _get_client_ip(request):
-    xf = request.META.get('HTTP_X_FORWARDED_FOR')
-    return xf.split(',')[0].strip() if xf else request.META.get('REMOTE_ADDR', '')
+def _rate_limited(key, limit):
+    """Count this hit against an hourly cap; True when the cap is exceeded."""
+    count = cache.get(key, 0) + 1
+    cache.set(key, count, 3600)
+    return count > limit
 
 
-@csrf_exempt
 @require_POST
 def chat_api(request):
+    """Public chatbot endpoint.
+
+    CSRF protection is intentionally left on: the widget sends the token that
+    ``{% csrf_token %}`` puts in the page, so a third-party site cannot drive
+    this endpoint (and spend Groq credits) from a visitor's browser.
+    """
     try:
-        data = _json.loads(request.body)
-    except _json.JSONDecodeError:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, UnicodeDecodeError):
         return JsonResponse({'error': 'Invalid JSON'}, status=400)
-    message = (data.get('message') or '').strip()
-    history = data.get('history', [])
+    if not isinstance(data, dict):
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    message = str(data.get('message') or '').strip()
     if not message:
-        return JsonResponse({'error': 'الرسالة فاضية'}, status=400)
-    if len(message) > 500:
-        message = message[:500]
-    ip = _get_client_ip(request)
-    ck = f"chat_rate_{ip}"
-    cnt = cache.get(ck, 0)
-    if cnt >= 20:
-        return JsonResponse({'reply': 'وصلت للحد الأقصى من الرسائل. حاول بعد ساعة أو تواصل معنا على الواتساب 201095454012.'})
-    cache.set(ck, cnt + 1, 3600)
+        return JsonResponse({'error': 'empty message'}, status=400)
+    message = message[:MAX_MESSAGE_LENGTH]
+
+    history = data.get('history') or []
+    if not isinstance(history, list):
+        history = []
+
+    # Per-visitor cap first, then a site-wide cap so a botnet -- or a shared
+    # proxy IP collapsing every visitor into one bucket -- still cannot run up
+    # the Groq bill.
+    if _rate_limited(f'chat_ip_{_client_ip(request)}', settings.CHAT_RATE_LIMIT_PER_HOUR):
+        return JsonResponse({'reply': CHAT_RATE_LIMIT_MESSAGE}, status=429)
+    if _rate_limited('chat_global', settings.CHAT_RATE_LIMIT_GLOBAL_PER_HOUR):
+        logger.warning('Chatbot global hourly cap reached')
+        return JsonResponse({'reply': CHAT_RATE_LIMIT_MESSAGE}, status=429)
+
     return JsonResponse({'reply': get_chatbot_response(message, history)})

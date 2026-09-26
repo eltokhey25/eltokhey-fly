@@ -8,6 +8,7 @@ primary_region = "ams"
   DJANGO_ALLOWED_HOSTS = "eltokhey-hajj.fly.dev"
   DJANGO_DB_PATH = "/data/db.sqlite3"
   DJANGO_MEDIA_ROOT = "/data/media"
+  DJANGO_CACHE_ROOT = "/data/cache"
   PORT = "8080"
 
 [http_service]
