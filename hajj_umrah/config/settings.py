@@ -1,5 +1,14 @@
 """
-Django settings for the Hajj & Umrah site.
+config/settings.py
+Every setting for the Hajj & Umrah site, in the order Django documents them.
+
+Two apps: `core` (the public site, the models, the chatbot) and `dashboard`
+(the staff back office). SQLite and a file-backed cache are deliberate - see
+DEPLOY.md for why, and for which environment variable each block reads.
+
+Reading order: paths and .env loading, then security, then apps and middleware,
+then templates, then database, then auth, then i18n, then static and media, then
+cache, then email, then the chatbot settings.
 """
 
 import os

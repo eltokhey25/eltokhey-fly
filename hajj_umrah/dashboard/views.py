@@ -1,10 +1,17 @@
+"""
+dashboard/views.py
+Every staff-facing view: the overview, trip/booking/review management,
+site settings, the media library, user administration and the preview.
+Routed by: dashboard/urls.py. Access is gated per view by the decorators
+in dashboard/permissions.py (staff_required / superuser_required).
+"""
 from datetime import timedelta
 import logging
 
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model, logout
-from django.contrib.auth.views import LoginView, LogoutView
+from django.contrib.auth.views import LoginView
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q, Sum
 from django.http import HttpResponse, HttpResponseRedirect
@@ -37,6 +44,7 @@ User = get_user_model()
 
 logger = logging.getLogger(__name__)
 
+# Homepage sections the dashboard can reorder, in their default order.
 SECTION_SLUGS = ['hero', 'trips', 'why', 'cta']
 SECTION_LABELS = {
     'hero': 'الغلاف الرئيسي (Hero)',
@@ -47,10 +55,32 @@ SECTION_LABELS = {
 
 
 def permission_denied(request, exception=None):
+    """Render the branded 403 page.
+
+    Wired as handler403 in config/urls.py, so it also catches a
+    PermissionDenied raised anywhere inside the dashboard.
+
+    Args:
+        request (HttpRequest): The rejected request.
+        exception (PermissionDenied): The exception raised, if any.
+
+    Returns:
+        HttpResponse: dashboard/403.html with a 403 status.
+    """
     return render(request, 'dashboard/403.html', status=403)
 
 
 def service_worker(request):
+    """Serve dashboard-sw.js scoped to /dashboard/.
+
+    Args:
+        request (HttpRequest): The incoming request.
+
+    Returns:
+        HttpResponse: the worker script, with no-cache headers and a
+            Service-Worker-Allowed scope of '/dashboard/' so it cannot
+            control the public site.
+    """
     sw_path = settings.BASE_DIR / 'static' / 'dashboard-sw.js'
     body = sw_path.read_text(encoding='utf-8') if sw_path.exists() else ''
     response = HttpResponse(body, content_type='application/javascript')
@@ -60,11 +90,27 @@ def service_worker(request):
 
 
 def offline(request):
+    """Render the dashboard offline fallback.
+
+    Args:
+        request (HttpRequest): The incoming request.
+
+    Returns:
+        HttpResponse: dashboard/offline.html.
+    """
     return render(request, 'dashboard/offline.html')
 
 
 @staff_required
 def overview(request):
+    """Render the dashboard home: counters, recent bookings, a price chart.
+
+    Args:
+        request (HttpRequest): The incoming request.
+
+    Returns:
+        HttpResponse: dashboard/overview.html.
+    """
     today = timezone.localdate()
     settings = SiteSettings.load()
 
@@ -124,6 +170,14 @@ def overview(request):
 # --------------------------------------------------------------------------
 @staff_required
 def trip_list(request):
+    """List trips with search plus active/hidden and type filters.
+
+    Args:
+        request (HttpRequest): Optional ?q=, ?stock= and ?type= filters.
+
+    Returns:
+        HttpResponse: dashboard/trips/list.html.
+    """
     query = request.GET.get('q', '').strip()
     stock = request.GET.get('stock', '')
     ttype = request.GET.get('type', '')
@@ -158,6 +212,14 @@ def trip_list(request):
 
 @staff_required
 def trip_create(request):
+    """Create a trip from the dashboard.
+
+    Args:
+        request (HttpRequest): GET renders the form, POST saves.
+
+    Returns:
+        HttpResponse: the form, or a redirect to the trip list.
+    """
     form = TripForm(request.POST or None, request.FILES or None)
     if request.method == 'POST' and form.is_valid():
         trip = form.save()
@@ -172,6 +234,15 @@ def trip_create(request):
 
 @staff_required
 def trip_edit(request, slug):
+    """Edit an existing trip, keyed by its public slug.
+
+    Args:
+        request (HttpRequest): GET renders the form, POST saves.
+        slug (str): Slug of the trip to edit.
+
+    Returns:
+        HttpResponse: the form, or a redirect to the trip list.
+    """
     trip = get_object_or_404(Trip, slug=slug)
     form = TripForm(request.POST or None, request.FILES or None, instance=trip)
     if request.method == 'POST' and form.is_valid():
@@ -186,6 +257,20 @@ def trip_edit(request, slug):
 
 
 def _move_trip(request, pk, up):
+    """Swap a trip's `order` with its neighbour and redirect back.
+
+    Shared by the move-up and move-down views. Ties in `order` are tolerated:
+    the neighbour is resolved by creation date, so dragging a trip that two
+    others share a position with still moves exactly one step.
+
+    Args:
+        request (HttpRequest): The POST request.
+        pk (int): Primary key of the trip being moved.
+        up (bool): True to move towards position 0, False to move down.
+
+    Returns:
+        HttpResponseRedirect: back to the trip list.
+    """
     trip = get_object_or_404(Trip, pk=pk)
     rows = list(Trip.objects.order_by('order', '-created_at', 'id'))
     index = next((i for i, row in enumerate(rows) if row.pk == trip.pk), None)
@@ -212,18 +297,45 @@ def _move_trip(request, pk, up):
 @staff_required
 @require_POST
 def trip_move_up(request, pk):
+    """Move a trip one position earlier in the public list.
+
+    Args:
+        request (HttpRequest): POST only.
+        pk (int): Primary key of the trip.
+
+    Returns:
+        HttpResponseRedirect: back to the trip list.
+    """
     return _move_trip(request, pk, up=True)
 
 
 @staff_required
 @require_POST
 def trip_move_down(request, pk):
+    """Move a trip one position later in the public list.
+
+    Args:
+        request (HttpRequest): POST only.
+        pk (int): Primary key of the trip.
+
+    Returns:
+        HttpResponseRedirect: back to the trip list.
+    """
     return _move_trip(request, pk, up=False)
 
 
 @staff_required
 @require_POST
 def trip_delete(request, slug):
+    """Delete a trip after confirmation.
+
+    Args:
+        request (HttpRequest): POST only.
+        slug (str): Slug of the trip to delete.
+
+    Returns:
+        HttpResponseRedirect: back to the trip list.
+    """
     trip = get_object_or_404(Trip, slug=slug)
     if trip.thumbnail:
         trip.thumbnail.delete(save=False)
@@ -237,6 +349,14 @@ def trip_delete(request, slug):
 # --------------------------------------------------------------------------
 @staff_required
 def booking_list(request):
+    """List bookings, newest first, filterable by status.
+
+    Args:
+        request (HttpRequest): Optional ?status= filter.
+
+    Returns:
+        HttpResponse: dashboard/bookings/list.html.
+    """
     query = request.GET.get('q', '').strip()
     status = request.GET.get('status', '').strip()
     bookings = Booking.objects.all().order_by('-created_at')
@@ -259,6 +379,15 @@ def booking_list(request):
 
 @staff_required
 def booking_detail(request, pk):
+    """Show one booking in full, with the actions available for its status.
+
+    Args:
+        request (HttpRequest): The incoming request.
+        pk (int): Booking primary key.
+
+    Returns:
+        HttpResponse: dashboard/bookings/detail.html.
+    """
     booking = get_object_or_404(Booking, pk=pk)
     if booking.status == BookingStatus.CONFIRMED:
         wa_msg = booking_confirmed_message(booking)
@@ -276,6 +405,14 @@ def booking_detail(request, pk):
 
 @staff_required
 def booking_create(request):
+    """Create a booking by hand, for walk-ins and phone enquiries.
+
+    Args:
+        request (HttpRequest): GET renders the form, POST saves.
+
+    Returns:
+        HttpResponse: the form, or a redirect to the booking detail.
+    """
     form = BookingForm(request.POST or None)
     if request.method == 'POST' and form.is_valid():
         booking = form.save()
@@ -288,6 +425,15 @@ def booking_create(request):
 @staff_required
 @require_POST
 def booking_delete(request, pk):
+    """Delete a booking record.
+
+    Args:
+        request (HttpRequest): POST only.
+        pk (int): Booking primary key.
+
+    Returns:
+        HttpResponseRedirect: back to the booking list.
+    """
     booking = get_object_or_404(Booking, pk=pk)
     messages.success(request, f'تم حذف طلب الحجز «{booking.name}».')
     booking.delete()
@@ -295,12 +441,32 @@ def booking_delete(request, pk):
 
 
 def _book_current_user(booking):
+    """Stamp the acting staff member onto a booking they just handled.
+
+    Args:
+        booking (Booking): The booking being actioned.
+
+    Returns:
+        None
+    """
     booking.handled_by = request.user
 
 
 @staff_required
 @require_POST
 def booking_confirm(request, pk):
+    """Confirm a pending booking and notify the customer.
+
+    Sets the status, stamps confirmed_at and the handling staff member, then
+    sends the confirmation email and the WhatsApp deep link.
+
+    Args:
+        request (HttpRequest): POST only.
+        pk (int): Booking primary key.
+
+    Returns:
+        HttpResponseRedirect: back to the booking detail.
+    """
     booking = get_object_or_404(Booking, pk=pk)
     booking.status = BookingStatus.CONFIRMED
     booking.confirmed_at = timezone.now()
@@ -320,6 +486,15 @@ def booking_confirm(request, pk):
 @staff_required
 @require_POST
 def booking_reject(request, pk):
+    """Reject a pending booking and notify the customer.
+
+    Args:
+        request (HttpRequest): POST only, with an optional `notes` reason.
+        pk (int): Booking primary key.
+
+    Returns:
+        HttpResponseRedirect: back to the booking detail.
+    """
     booking = get_object_or_404(Booking, pk=pk)
     booking.status = BookingStatus.REJECTED
     booking.handled_by = request.user
@@ -338,6 +513,15 @@ def booking_reject(request, pk):
 @staff_required
 @require_POST
 def booking_complete(request, pk):
+    """Mark a confirmed booking as completed once the trip has run.
+
+    Args:
+        request (HttpRequest): POST only.
+        pk (int): Booking primary key.
+
+    Returns:
+        HttpResponseRedirect: back to the booking detail.
+    """
     booking = get_object_or_404(Booking, pk=pk)
     booking.status = BookingStatus.COMPLETED
     booking.handled_by = request.user
@@ -354,6 +538,14 @@ def booking_complete(request, pk):
 # --------------------------------------------------------------------------
 @staff_required
 def review_list(request):
+    """Render the review moderation queue.
+
+    Args:
+        request (HttpRequest): Optional ?status= filter.
+
+    Returns:
+        HttpResponse: dashboard/reviews/list.html.
+    """
     status = request.GET.get('status', '').strip()
     query = request.GET.get('q', '').strip()
     reviews = Review.objects.select_related('trip', 'approved_by').all()
@@ -377,6 +569,15 @@ def review_list(request):
 
 @staff_required
 def review_detail(request, pk):
+    """Show a single review before moderating it.
+
+    Args:
+        request (HttpRequest): The incoming request.
+        pk (int): Review primary key.
+
+    Returns:
+        HttpResponse: dashboard/reviews/detail.html.
+    """
     review = get_object_or_404(Review, pk=pk)
     context = {'review': review, 'page': 'reviews'}
     return render(request, 'dashboard/reviews/detail.html', context)
@@ -385,6 +586,15 @@ def review_detail(request, pk):
 @staff_required
 @require_POST
 def review_approve(request, pk):
+    """Publish a review to the public site.
+
+    Args:
+        request (HttpRequest): POST only.
+        pk (int): Review primary key.
+
+    Returns:
+        HttpResponseRedirect: back to the review list.
+    """
     review = get_object_or_404(Review, pk=pk)
     review.status = ReviewStatus.APPROVED
     review.approved_at = timezone.now()
@@ -398,6 +608,15 @@ def review_approve(request, pk):
 @staff_required
 @require_POST
 def review_reject(request, pk):
+    """Keep a review unpublished and record why.
+
+    Args:
+        request (HttpRequest): POST only, with a `reason` field.
+        pk (int): Review primary key.
+
+    Returns:
+        HttpResponseRedirect: back to the review list.
+    """
     review = get_object_or_404(Review, pk=pk)
     review.status = ReviewStatus.REJECTED
     review.rejection_reason = request.POST.get('rejection_reason', '').strip()[:500]
@@ -409,6 +628,15 @@ def review_reject(request, pk):
 @staff_required
 @require_POST
 def review_delete(request, pk):
+    """Delete a review outright.
+
+    Args:
+        request (HttpRequest): POST only.
+        pk (int): Review primary key.
+
+    Returns:
+        HttpResponseRedirect: back to the review list.
+    """
     review = get_object_or_404(Review, pk=pk)
     if review.photo:
         review.photo.delete(save=False)
@@ -422,6 +650,14 @@ def review_delete(request, pk):
 # --------------------------------------------------------------------------
 @staff_required
 def settings_edit(request):
+    """Edit the SiteSettings singleton (company details and page copy).
+
+    Args:
+        request (HttpRequest): GET renders, POST saves.
+
+    Returns:
+        HttpResponse: dashboard/settings.html.
+    """
     instance = SiteSettings.load()
     form = SettingsForm(request.POST or None, instance=instance)
     if request.method == 'POST' and form.is_valid():
@@ -434,6 +670,14 @@ def settings_edit(request):
 
 @staff_required
 def sections_view(request):
+    """Reorder and show/hide the homepage sections.
+
+    Args:
+        request (HttpRequest): POST persists the new order.
+
+    Returns:
+        HttpResponse: dashboard/sections.html.
+    """
     instance = SiteSettings.load()
     if request.method == 'POST':
         order = request.POST.getlist('order', [])
@@ -461,6 +705,14 @@ def sections_view(request):
 # --------------------------------------------------------------------------
 @staff_required
 def media_list(request):
+    """List the reusable media library.
+
+    Args:
+        request (HttpRequest): The incoming request.
+
+    Returns:
+        HttpResponse: the media page, with the upload form.
+    """
     files = MediaFile.objects.all()
     context = {'files': files, 'page': 'media'}
     return render(request, 'dashboard/media/list.html', context)
@@ -468,6 +720,14 @@ def media_list(request):
 
 @staff_required
 def media_upload(request):
+    """Upload an image into the media library.
+
+    Args:
+        request (HttpRequest): POST carries title, alt and the file.
+
+    Returns:
+        HttpResponseRedirect: back to the media list.
+    """
     form = MediaForm(request.POST or None, request.FILES or None)
     if request.method == 'POST' and form.is_valid():
         media = form.save()
@@ -480,6 +740,15 @@ def media_upload(request):
 @staff_required
 @require_POST
 def media_delete(request, pk):
+    """Delete a media entry and its file from storage.
+
+    Args:
+        request (HttpRequest): POST only.
+        pk (int): MediaFile primary key.
+
+    Returns:
+        HttpResponseRedirect: back to the media list.
+    """
     media = get_object_or_404(MediaFile, pk=pk)
     if media.file:
         media.file.delete(save=False)
@@ -493,6 +762,14 @@ def media_delete(request, pk):
 # --------------------------------------------------------------------------
 @superuser_required
 def user_list(request):
+    """List staff accounts. Superusers only.
+
+    Args:
+        request (HttpRequest): The incoming request.
+
+    Returns:
+        HttpResponse: dashboard/users/list.html.
+    """
     users = User.objects.all().order_by('-is_superuser', '-is_staff', 'username')
     context = {'users': users, 'page': 'users'}
     return render(request, 'dashboard/users/list.html', context)
@@ -500,6 +777,14 @@ def user_list(request):
 
 @superuser_required
 def user_create(request):
+    """Create a staff account. Superusers only.
+
+    Args:
+        request (HttpRequest): GET renders the form, POST saves.
+
+    Returns:
+        HttpResponse: the form, or a redirect to the user list.
+    """
     form = UserForm(request.POST or None)
     if request.method == 'POST' and form.is_valid():
         if not form.cleaned_data.get('password'):
@@ -514,6 +799,15 @@ def user_create(request):
 
 @superuser_required
 def user_edit(request, pk):
+    """Edit a staff account, including its role. Superusers only.
+
+    Args:
+        request (HttpRequest): GET renders the form, POST saves.
+        pk (int): User primary key.
+
+    Returns:
+        HttpResponse: the form, or a redirect to the user list.
+    """
     user = get_object_or_404(User, pk=pk)
     form = UserForm(request.POST or None, instance=user)
     if request.method == 'POST' and form.is_valid():
@@ -531,6 +825,15 @@ def user_edit(request, pk):
 @superuser_required
 @require_POST
 def user_delete(request, pk):
+    """Delete a staff account. Superusers only, and never yourself.
+
+    Args:
+        request (HttpRequest): POST only.
+        pk (int): User primary key.
+
+    Returns:
+        HttpResponseRedirect: back to the user list.
+    """
     user = get_object_or_404(User, pk=pk)
     if user == request.user:
         raise PermissionDenied('لا يمكنك حذف حسابك الحالي.')
@@ -544,6 +847,17 @@ def user_delete(request, pk):
 # --------------------------------------------------------------------------
 @staff_required
 def preview(request):
+    """Render the public homepage inside the dashboard chrome.
+
+    Lets staff edit copy and check the result without a second tab. Read-only:
+    saving still happens on the real pages.
+
+    Args:
+        request (HttpRequest): The incoming request.
+
+    Returns:
+        HttpResponse: dashboard/preview.html wrapping home.html.
+    """
     preview_pages = [
         ('/', 'الرئيسية'),
         ('/trips/', 'كل الرحلات'),
@@ -563,14 +877,35 @@ def preview(request):
 
 
 class DashboardLoginView(LoginView):
+    """Dashboard login page, wired to the branded form and template.
+
+Replaces Django's LoginView to (a) use DashboardLoginForm, (b) keep the
+Arabic template, and (c) send staff to the dashboard instead of the site.
+    """
     template_name = 'dashboard/login.html'
     authentication_form = DashboardLoginForm
     redirect_authenticated_user = True
 
     def get_redirect_url(self):
+        """Send a freshly logged-in user to the dashboard, not the site.
+
+        Returns:
+            str: The dashboard overview URL.
+        """
         return reverse('dashboard:overview')
 
     def dispatch(self, request, *args, **kwargs):
+        """Bounce an already-authenticated visitor away from the login page.
+
+        Args:
+            request (HttpRequest): The incoming request.
+            *args: Positional args forwarded to LoginView.
+            **kwargs: Keyword args forwarded to LoginView.
+
+        Returns:
+            HttpResponse: A redirect when already logged in, otherwise the
+                normal LoginView response.
+        """
         if self.redirect_authenticated_user and request.user.is_authenticated:
             if request.user.is_staff or request.user.is_superuser:
                 return HttpResponseRedirect(self.get_redirect_url())
@@ -578,6 +913,15 @@ class DashboardLoginView(LoginView):
         return super().dispatch(request, *args, **kwargs)
 
     def form_valid(self, form):
+        """Log the user in and honour an intended ?next= destination.
+
+        Args:
+            form (AuthenticationForm): The validated login form.
+
+        Returns:
+            HttpResponseRedirect: To ?next= when it is a safe local URL,
+                otherwise to the dashboard overview.
+        """
         response = super().form_valid(form)
         user = self.request.user
         if not (user.is_staff or user.is_superuser):
@@ -589,5 +933,13 @@ class DashboardLoginView(LoginView):
 
 @staff_required
 def dashboard_logout(request):
+    """Log the current staff member out.
+
+    Args:
+        request (HttpRequest): POST only.
+
+    Returns:
+        HttpResponseRedirect: to the dashboard login.
+    """
     logout(request)
     return redirect('dashboard:login')

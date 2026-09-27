@@ -1,3 +1,7 @@
+"""
+Seeds the first trips and the homepage section order, so a fresh
+database is a working site rather than an empty one.
+"""
 from django.db import migrations
 
 

@@ -1,9 +1,15 @@
+"""
+dashboard/forms.py
+Every form the dashboard renders: staff login, trip editing, manual booking
+entry, site settings, staff accounts and media uploads.
+Used by: dashboard/views.py. The forms wrap Django/ModelForm behaviour and add
+the Arabic labels, so validation logic stays in the framework.
+"""
 import json
-import secrets
 
 from django import forms
 from django.contrib.auth import get_user_model
-from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm
+from django.contrib.auth.forms import AuthenticationForm
 from django.utils.text import slugify
 
 from core.models import Booking, SiteSettings, Trip, TripType
@@ -14,6 +20,11 @@ User = get_user_model()
 
 
 class DashboardLoginForm(AuthenticationForm):
+    """Dashboard login form with Arabic labels and a friendlier error.
+
+    Extends Django's AuthenticationForm so the authentication check and
+    password handling stay Django's; only presentation changes.
+    """
     username = forms.CharField(
         label='اسم المستخدم',
         widget=forms.TextInput(attrs={'class': 'input', 'placeholder': 'اسم المستخدم'}),
@@ -30,6 +41,11 @@ class DashboardLoginForm(AuthenticationForm):
 
 
 class TripForm(forms.ModelForm):
+    """Create/edit form for a trip, with slug and JSON list handling.
+
+    The itinerary / includes / excludes fields are stored as JSON lists but
+    edited as one-item-per-line textareas, so staff never see JSON.
+    """
     itinerary_json = forms.CharField(
         widget=forms.HiddenInput(), required=False, label=''
     )
@@ -50,6 +66,7 @@ class TripForm(forms.ModelForm):
     )
 
     class Meta:
+        """Django ModelForm configuration: which model, fields and widgets."""
         model = Trip
         fields = [
             'name', 'slug', 'trip_type', 'description', 'price', 'duration',
@@ -76,6 +93,11 @@ class TripForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        """Apply the Arabic labels, help texts and widgets for the trip form.
+
+        Everything here is presentation: field ordering, the help text staff
+        need, and rendering the three JSON list fields as plain textareas.
+        """
         super().__init__(*args, **kwargs)
         labels = {
             'name': 'اسم الرحلة',
@@ -114,6 +136,12 @@ class TripForm(forms.ModelForm):
                 )
 
     def clean(self):
+        """Validate the form and normalise the line-based list fields.
+
+        Returns:
+            dict: cleaned_data, with the three list fields converted from
+                text lines to Python lists ready for the JSONField.
+        """
         cleaned = super().clean()
         try:
             steps = json.loads(self.data.get('itinerary_json') or '[]')
@@ -130,6 +158,17 @@ class TripForm(forms.ModelForm):
                 cleaned['itinerary'].append({'title': title, 'city': city, 'desc': desc})
 
         def _lines(name):
+            """Turn a textarea value into a clean list of non-empty lines.
+
+        Used to convert the one-item-per-line trip textareas into the JSON
+        lists the model stores, dropping blank lines and stray whitespace.
+
+        Args:
+            name (str): The cleaned_data key to read.
+
+        Returns:
+            list[str]: The parsed lines.
+        """
             return [
                 line.strip()
                 for line in (self.data.get(name, '') or '').splitlines()
@@ -142,6 +181,15 @@ class TripForm(forms.ModelForm):
         return cleaned
 
     def _ensure_slug(self, cleaned):
+        """Guarantee a unique, URL-safe slug for the trip.
+
+        Args:
+            cleaned (dict): The cleaned_data being assembled.
+
+        Returns:
+            str: A slug no other trip is using, derived from the name when
+                the field was left blank.
+        """
         name = cleaned.get('name')
         slug = cleaned.get('slug')
         if slug:
@@ -160,6 +208,14 @@ class TripForm(forms.ModelForm):
         cleaned['slug'] = candidate
 
     def save(self, commit=True):
+        """Serialise the list fields and save the trip.
+
+        Args:
+            commit (bool): Save to the database when True.
+
+        Returns:
+            Trip: The saved (or unsaved) instance.
+        """
         for field in ('itinerary', 'includes', 'excludes'):
             setattr(self.instance, field, self.cleaned_data.get(field, []))
         new_image = self.files.get('thumbnail')
@@ -176,7 +232,9 @@ class TripForm(forms.ModelForm):
 
 
 class BookingForm(forms.ModelForm):
+    """Dashboard form for creating a booking by hand (walk-ins)."""
     class Meta:
+        """Django ModelForm configuration: which model, fields and widgets."""
         model = Booking
         fields = ['name', 'phone', 'email', 'trip_label', 'trip_type', 'people', 'notes']
         widgets = {
@@ -190,6 +248,7 @@ class BookingForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        """Apply the Arabic labels used by the manual-booking form."""
         super().__init__(*args, **kwargs)
         labels = {
             'name': 'الاسم الكامل',
@@ -212,7 +271,9 @@ class BookingForm(forms.ModelForm):
 
 
 class SettingsForm(forms.ModelForm):
+    """Edits the SiteSettings singleton, including the homepage section order."""
     class Meta:
+        """Django ModelForm configuration: which model, fields and widgets."""
         model = SiteSettings
         fields = [
             'company', 'phone', 'whatsapp', 'email', 'address', 'facebook',
@@ -238,6 +299,7 @@ class SettingsForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        """Apply the Arabic labels and help text to the site-settings form."""
         super().__init__(*args, **kwargs)
         labels = {
             'company': 'اسم الشركة',
@@ -260,6 +322,11 @@ class SettingsForm(forms.ModelForm):
 
 
 class UserForm(forms.ModelForm):
+    """Create/edit form for a staff account, including role assignment.
+
+    The password is optional on edit: leaving both fields blank keeps the
+    existing password instead of clearing it.
+    """
     password = forms.CharField(
         label='كلمة المرور',
         required=False,
@@ -268,6 +335,7 @@ class UserForm(forms.ModelForm):
     )
 
     class Meta:
+        """Django ModelForm configuration: which model, fields and widgets."""
         model = User
         fields = ['username', 'first_name', 'last_name', 'email', 'is_active', 'is_staff', 'is_superuser']
         widgets = {
@@ -281,6 +349,7 @@ class UserForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        """Apply the Arabic labels to the staff-account form."""
         super().__init__(*args, **kwargs)
         labels = {
             'username': 'اسم المستخدم',
@@ -295,6 +364,14 @@ class UserForm(forms.ModelForm):
             self.fields[name].label = label
 
     def clean_username(self):
+        """Reject a username that another account already uses.
+
+        Returns:
+            str: The cleaned username.
+
+        Raises:
+            forms.ValidationError: On a duplicate, case-insensitively.
+        """
         username = self.cleaned_data['username']
         qs = User.objects.filter(username__iexact=username)
         if self.instance.pk:
@@ -304,6 +381,14 @@ class UserForm(forms.ModelForm):
         return username
 
     def save(self, commit=True):
+        """Serialise the list fields and save the trip.
+
+        Args:
+            commit (bool): Save to the database when True.
+
+        Returns:
+            Trip: The saved (or unsaved) instance.
+        """
         user = super().save(commit=False)
         password = self.cleaned_data.get('password')
         if password:
@@ -314,7 +399,9 @@ class UserForm(forms.ModelForm):
 
 
 class MediaForm(forms.ModelForm):
+    """Upload form for the media library (title, alt text, image file)."""
     class Meta:
+        """Django ModelForm configuration: which model, fields and widgets."""
         model = MediaFile
         fields = ['title', 'file', 'alt']
         widgets = {
@@ -324,6 +411,7 @@ class MediaForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        """Apply the Arabic labels to the media upload form."""
         super().__init__(*args, **kwargs)
         labels = {'title': 'عنوان الملف', 'file': 'الملف', 'alt': 'النص البديل'}
         for name, label in labels.items():

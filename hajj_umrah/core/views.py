@@ -1,3 +1,10 @@
+"""
+core/views.py
+Public site views: pages, the booking form, booking tracking,
+review submission, the PWA plumbing and the chatbot JSON API.
+Routed by: core/urls.py. Renders: templates/*.html, returns JSON for
+           static/js/chatbot.js.
+"""
 import json
 import logging
 import re
@@ -10,7 +17,7 @@ from django.core.mail import send_mail
 from django.core.paginator import Paginator
 from django.contrib import messages
 from django.db.models import Q
-from django.http import Http404, HttpResponse, JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.response import TemplateResponse
 from django.utils import timezone
@@ -28,6 +35,7 @@ from .whatsapp import (
 
 logger = logging.getLogger(__name__)
 
+# Shown to the visitor (and logged) when either chat rate cap is hit.
 CHAT_RATE_LIMIT_MESSAGE = (
     'وصلت للحد الأقصى من الرسائل. حاول بعد ساعة أو تواصل معنا على '
     'الواتساب 201095454012.'
@@ -35,6 +43,15 @@ CHAT_RATE_LIMIT_MESSAGE = (
 
 
 def _wa_trip_href(whatsapp, trip_name):
+    """Build a WhatsApp deep link that pre-fills a request for one trip.
+
+    Args:
+        whatsapp (str): Agency WhatsApp number from SiteSettings.
+        trip_name (str): Name of the trip the visitor is looking at.
+
+    Returns:
+        str: wa.me URL, or '' when either value is missing.
+    """
     number = re.sub(r'\D', '', whatsapp or '')
     if not number or not trip_name:
         return ''
@@ -43,6 +60,18 @@ def _wa_trip_href(whatsapp, trip_name):
 
 
 def home(request):
+    """Render the homepage.
+
+    Shows the active trips and the three most recently published reviews,
+    plus the total review count used to decide whether the reviews block
+    gets a "see all" button.
+
+    Args:
+        request (HttpRequest): The incoming request.
+
+    Returns:
+        HttpResponse: home.html rendered with trips and latest_reviews.
+    """
     trips = Trip.objects.filter(is_active=True)
     approved = Review.objects.filter(status=ReviewStatus.APPROVED)
     context = {
@@ -58,6 +87,14 @@ def home(request):
 
 
 def reviews_list(request):
+    """Render the paginated list of approved reviews.
+
+    Args:
+        request (HttpRequest): Carries an optional ?page= query parameter.
+
+    Returns:
+        HttpResponse: reviews.html with 12 reviews per page.
+    """
     reviews = Review.objects.filter(status=ReviewStatus.APPROVED).order_by('-approved_at', '-created_at')
     paginator = Paginator(reviews, 12)
     page = paginator.get_page(request.GET.get('page'))
@@ -69,18 +106,28 @@ def reviews_list(request):
     return render(request, 'reviews.html', context)
 
 
-def _client_ip(request):
-    forwarded = request.META.get('HTTP_X_FORWARDED_FOR', '')
-    if forwarded:
-        return forwarded.split(',')[0].strip() or request.META.get('REMOTE_ADDR')
-    return request.META.get('REMOTE_ADDR')
-
-
 def review_submit(request):
+    """Accept a customer review and queue it for moderation.
+
+    GET renders the empty form. On a valid POST the review is stored as
+    PENDING (never published directly) together with the submitter's IP.
+
+    Anti-spam, in order of cost:
+        1. a honeypot field rejected in ReviewForm.clean_website
+        2. one submission per IP per 24h, enforced below
+
+    Args:
+        request (HttpRequest): GET renders, POST submits.
+
+    Returns:
+        HttpResponse: the form, or a redirect to the reviews list.
+    """
     if request.method == 'POST':
         ip = _client_ip(request)
         form = ReviewForm(request.POST, request.FILES)
         if form.is_valid():
+            # Rate limit: one review per IP per 24h. A blocked submission
+            # still shows the thank-you message so a bot learns nothing.
             rate_limited = Review.objects.filter(
                 ip_address=ip,
                 created_at__gte=timezone.now() - timedelta(hours=24),
@@ -102,6 +149,15 @@ def review_submit(request):
 
 
 def trips_list(request):
+    """Render every active trip, optionally filtered by a search term.
+
+    Args:
+        request (HttpRequest): Optional ?q= term matched against the trip
+            name and description.
+
+    Returns:
+        HttpResponse: trips.html with the matching active trips.
+    """
     query = (request.GET.get('q') or '').strip()
     trips = Trip.objects.filter(is_active=True)
     if query:
@@ -116,6 +172,17 @@ def trips_list(request):
 
 
 def trip_detail(request, slug):
+    """Render one trip, with related trips and a WhatsApp booking link.
+
+    Args:
+        request (HttpRequest): The incoming request.
+        slug (str): URL slug of the trip.
+
+    Returns:
+        HttpResponse: trip_detail.html; 404 for a missing or hidden trip,
+            because get_object_or_404 filters on is_active=True so staff can
+            unpublish a trip without leaving it indexable.
+    """
     trip = get_object_or_404(Trip, slug=slug, is_active=True)
     settings = SiteSettings.load()
     context = {
@@ -127,10 +194,28 @@ def trip_detail(request, slug):
 
 
 def about(request):
+    """Render the static about page.
+
+    Args:
+        request (HttpRequest): The incoming request.
+
+    Returns:
+        HttpResponse: about.html.
+    """
     return render(request, 'about.html')
 
 
 def _booking_summary_lines(booking):
+    """Render a booking as the plain-text body shared by both emails.
+
+    Args:
+        booking (Booking): The booking to summarise.
+
+    Returns:
+        str: Newline-separated Arabic field list, reused by the admin
+            notification and the customer acknowledgement so the two can
+            never drift apart.
+    """
     created = timezone.localtime(booking.created_at).strftime('%Y-%m-%d %H:%M')
     lines = [
         f'رقم الحجز: {booking.reference_code}',
@@ -150,6 +235,19 @@ def _booking_summary_lines(booking):
 
 
 def _send_booking_emails(booking):
+    """Email the agency about a new booking and acknowledge the customer.
+
+    The admin address comes from settings.ADMIN_NOTIFICATION_EMAIL and
+    falls back to SiteSettings.email. Both sends are best-effort: a mail
+    failure is logged and swallowed, because losing the booking request
+    itself would be far worse than losing the notification.
+
+    Args:
+        booking (Booking): The booking that was just saved.
+
+    Returns:
+        None
+    """
     admin_email = settings.ADMIN_NOTIFICATION_EMAIL or SiteSettings.load().email
 
     summary = _booking_summary_lines(booking)
@@ -179,10 +277,26 @@ def _send_booking_emails(booking):
 
 
 def booking(request):
+    """Public booking request form.
+
+    Validated by hand rather than with a Form class because the markup is
+    shared with the chat flow and only name/phone are mandatory.
+
+    On success the booking is stored, both emails are sent and a WhatsApp
+    deep link is produced for the visitor.
+
+    Args:
+        request (HttpRequest): POST carries the hu_* fields; GET may carry
+            ?trip=<id> to preselect a trip from the chatbot.
+
+    Returns:
+        HttpResponse: booking.html with form_msg/form_ok feedback.
+    """
     msg = None
     ok = False
 
     if request.method == 'POST':
+        # Manual validation: name and phone are the only required fields.
         name = request.POST.get('hu_name', '').strip()
         phone = request.POST.get('hu_phone', '').strip()
         if not name or not phone:
@@ -231,6 +345,19 @@ def booking(request):
 
 
 def _find_booking(q):
+    """Look up a booking from whatever the visitor typed into tracking.
+
+    Tried in order, most to least strict:
+        1. exact reference code (case-insensitive)
+        2. exact phone match
+        3. digits-only phone match, so '050 123 4567' finds '0501234567'
+
+    Args:
+        q (str): Raw query string from ?q=.
+
+    Returns:
+        Booking | None: The most recent match, or None when nothing fits.
+    """
     query = (q or '').strip()
     if not query:
         return None
@@ -248,6 +375,8 @@ def _find_booking(q):
     )
     if booking:
         return booking
+    # Last resort: compare digit-only phone numbers so cosmetic
+    # formatting differences do not break tracking.
     digits = re.sub(r'\D', '', query)
     if digits:
         for candidate in Booking.objects.order_by('-created_at').only('pk', 'phone'):
@@ -257,6 +386,16 @@ def _find_booking(q):
 
 
 def track_booking(request):
+    """Show where a booking request stands.
+
+    Args:
+        request (HttpRequest): Carries ?q= (reference code or phone).
+
+    Returns:
+        HttpResponse: track_booking.html; `not_found` drives the error
+            message and the two wa_*_msg values pre-fill the WhatsApp button
+            for the visitor to send from their own phone.
+    """
     q = (request.GET.get('q') or '').strip()
     booking = _find_booking(q) if q else None
     context = {
@@ -271,10 +410,34 @@ def track_booking(request):
 
 
 def not_found(request, exception=None):
+    """Render the branded 404 page.
+
+    Wired as handler404 in config/urls.py.
+
+    Args:
+        request (HttpRequest): The incoming request.
+        exception (Exception): The exception Django raised, if any.
+
+    Returns:
+        HttpResponse: 404.html with a 404 status.
+    """
     return render(request, '404.html', status=404)
 
 
 def service_worker(request):
+    """Serve sw.js from the source tree with no-cache headers.
+
+    Served by a view rather than from staticfiles so the worker always
+    reaches the browser: Service-Worker-Allowed widens its scope to '/',
+    and no-cache makes the browser re-check it on every load, which is what
+    lets a VERSION bump inside the file actually roll out.
+
+    Args:
+        request (HttpRequest): The incoming request.
+
+    Returns:
+        HttpResponse: the worker script as application/javascript.
+    """
     sw_path = settings.BASE_DIR / 'static' / 'sw.js'
     body = sw_path.read_text(encoding='utf-8') if sw_path.exists() else ''
     response = HttpResponse(body, content_type='application/javascript')
@@ -284,6 +447,14 @@ def service_worker(request):
 
 
 def offline(request):
+    """Render the PWA offline fallback page.
+
+    Args:
+        request (HttpRequest): The incoming request.
+
+    Returns:
+        HttpResponse: offline.html.
+    """
     return render(request, 'offline.html')
 
 
@@ -298,10 +469,21 @@ def chat_page(request):
 
 
 def robots_txt(request):
+    """Serve /robots.txt from templates/robots.txt.
+
+    Args:
+        request (HttpRequest): The incoming request.
+
+    Returns:
+        TemplateResponse: the robots file as text/plain.
+    """
     return TemplateResponse(request, 'robots.txt', content_type='text/plain')
 
 
 # --- AI Chatbot API -------------------------------------------------------
+# Everything below is consumed by static/js/chatbot.js over fetch().
+# The three endpoints are core:chat_api, core:chat_trips_api and
+# core:chat_booking_api; all of them keep CSRF protection on.
 
 
 def _client_ip(request):
@@ -321,7 +503,15 @@ def _client_ip(request):
 
 
 def _rate_limited(key, limit):
-    """Count this hit against an hourly cap; True when the cap is exceeded."""
+    """Count this hit against an hourly cap.
+
+    Args:
+        key (str): Cache key identifying the bucket (IP or global).
+        limit (int): Maximum hits allowed per hour.
+
+    Returns:
+        bool: True when this request exceeds the cap and must be refused.
+    """
     count = cache.get(key, 0) + 1
     cache.set(key, count, 3600)
     return count > limit

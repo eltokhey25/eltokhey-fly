@@ -17,16 +17,22 @@ db.sqlite3
 *.backup
 
 # --- Media / uploads ---
-media/
-hajj_umrah/media/
+# Anchored with a leading slash on purpose: a bare "media/" also matched
+# hajj_umrah/dashboard/templates/dashboard/media/, which silently kept the
+# dashboard's media templates out of the repository.
+/media/
+/hajj_umrah/media/
 
 # --- Collected static ---
-staticfiles/
-hajj_umrah/staticfiles/
+# Anchored: an unanchored "staticfiles/" would also swallow any directory with
+# that name inside an app.
+/staticfiles/
+/hajj_umrah/staticfiles/
 
 # --- Local cache (rate-limit counters) ---
-cache/
-hajj_umrah/cache/
+# Anchored for the same reason as the rules above.
+/cache/
+/hajj_umrah/cache/
 
 # --- Python ---
 __pycache__/

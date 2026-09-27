@@ -1,3 +1,10 @@
+"""
+core/models.py
+Database models for the whole site: Trip, Booking, Review and the
+SiteSettings singleton, plus the image-normalisation helper they share.
+Used by: core/views.py, core/chatbot.py, core/admin.py, dashboard/views.py,
+         dashboard/forms.py, and every template via the site_settings processor.
+"""
 from io import BytesIO
 from uuid import uuid4
 
@@ -7,8 +14,11 @@ from django.core.files.storage import default_storage
 from django.db import models
 from django.utils import timezone
 
+# ---- Image pipeline limits -------------------------------------------
+# Longest edge (px) allowed for a trip thumbnail / a customer review photo.
 TRIP_THUMBNAIL_MAX = 1600
 REVIEW_PHOTO_MAX = 400
+# JPEG quality for re-encoded uploads; PNG output ignores it.
 JPEG_QUALITY = 85
 
 
@@ -21,7 +31,14 @@ def _normalize_image(img_field, max_size, quality=JPEG_QUALITY):
     - Saves as JPEG (quality=85) unless the source had transparency, in which case
       it is kept as PNG.
 
-    Returns ``(new_name, ContentFile)`` or ``None`` when the file can't be read.
+    Args:
+        img_field (FieldFile): The image file attached to the model.
+        max_size (int): Longest allowed edge in pixels.
+        quality (int): JPEG quality for the re-encoded file.
+
+    Returns:
+        tuple | None: ``(new_name, ContentFile)`` on success, or None when
+            the file cannot be read — a corrupt upload must not break save().
     """
     from PIL import Image, ImageOps
 
@@ -47,12 +64,16 @@ def _normalize_image(img_field, max_size, quality=JPEG_QUALITY):
 
 
 class TripType(models.TextChoices):
+    """The kinds of trip the agency sells (stored as slugs, shown in Arabic)."""
+
     HAJJ = 'hajj', 'الحج'
     UMRAH = 'umrah', 'العمرة'
     RAMADAN = 'ramadan', 'عمرة رمضان'
 
 
 class BookingStatus(models.TextChoices):
+    """Lifecycle of a booking request, from submission to completion."""
+
     PENDING = 'pending', 'قيد المراجعة'
     CONFIRMED = 'confirmed', 'تم التأكيد'
     REJECTED = 'rejected', 'مرفوض'
@@ -60,12 +81,20 @@ class BookingStatus(models.TextChoices):
 
 
 class ReviewStatus(models.TextChoices):
+    """Moderation state of a review; only APPROVED is shown publicly."""
+
     PENDING = 'pending', 'قيد المراجعة'
     APPROVED = 'approved', 'منشور'
     REJECTED = 'rejected', 'مرفوض'
 
 
 class Trip(models.Model):
+    """A Hajj/Umrah departure — the core piece of content on the site.
+
+    Homepage ordering is driven by the ``order`` field so staff can
+    rearrange trips from the dashboard without touching dates.
+    """
+
     name = models.CharField('اسم الرحلة', max_length=255)
     slug = models.SlugField('الرابط', max_length=255, unique=True)
     trip_type = models.CharField(
@@ -97,18 +126,41 @@ class Trip(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
+        """Order trips by the dashboard's manual order, newest as tie-breaker."""
+        # Manual order first, newest as the tie-breaker.
         ordering = ['order', '-created_at']
         verbose_name = 'رحلة'
         verbose_name_plural = 'الرحلات'
 
     def __str__(self):
+        """Return the trip name (admin dropdowns and selects)."""
         return self.name
 
     def __init__(self, *args, **kwargs):
+        """Snapshot the thumbnail name so save() can detect replacements.
+
+        Args:
+            *args: Positional args forwarded to Model.
+            **kwargs: Keyword args forwarded to Model.
+        """
         super().__init__(*args, **kwargs)
+        # Snapshot used by save() to tell a new upload from an untouched field.
         self._original_thumbnail = self.thumbnail.name if self.thumbnail else None
 
     def save(self, *args, **kwargs):
+        """Save the trip, normalising the thumbnail and removing the old file.
+
+        A newly uploaded thumbnail is re-encoded (downscaled to
+        TRIP_THUMBNAIL_MAX) under a random name, and the file it replaced is
+        deleted from storage so uploads do not pile up.
+
+        Args:
+            *args: Positional args forwarded to Model.save().
+            **kwargs: Keyword args forwarded to Model.save().
+
+        Returns:
+            None
+        """
         adding = self._state.adding
         uploaded = self.thumbnail.name if self.thumbnail else None
         thumb_changed = adding or uploaded != self._original_thumbnail
@@ -132,6 +184,15 @@ class Trip(models.Model):
 
     @property
     def price_display(self):
+        """Return the price as displayable Arabic text.
+
+        A numeric price is formatted with thousands separators and a currency
+        suffix, free text is shown verbatim, and an empty field falls back to a
+        "coming soon" message.
+
+        Returns:
+            str: Text ready to drop into a template.
+        """
         if not self.price:
             return 'السعر قريباً'
         text = str(self.price).strip()
@@ -141,6 +202,13 @@ class Trip(models.Model):
 
 
 class Booking(models.Model):
+    """A customer's booking request.
+
+    Created from the public form, from the chat API, or by hand in the
+    dashboard. The reference code is what the customer types into the
+    tracking page.
+    """
+
     reference_code = models.CharField('رقم الحجز', max_length=20, unique=True, blank=True)
     name = models.CharField('الاسم الكامل', max_length=255)
     phone = models.CharField('رقم الهاتف', max_length=50)
@@ -165,14 +233,25 @@ class Booking(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
+        """List bookings newest first in the admin."""
         ordering = ['-created_at']
         verbose_name = 'طلب حجز'
         verbose_name_plural = 'طلبات الحجز'
 
     def __str__(self):
+        """Return "reference — customer — trip" for admin lists."""
         return f'{self.reference_code or "—"} — {self.name} — {self.trip_label or "بدون رحلة محددة"}'
 
     def save(self, *args, **kwargs):
+        """Fill in the reference code and confirmation timestamp, then save.
+
+        Args:
+            *args: Positional args forwarded to Model.save().
+            **kwargs: Keyword args forwarded to Model.save().
+
+        Returns:
+            None
+        """
         if not self.reference_code:
             self.reference_code = self._generate_reference_code()
         if self.status == BookingStatus.CONFIRMED and not self.confirmed_at:
@@ -181,6 +260,15 @@ class Booking(models.Model):
 
     @classmethod
     def _generate_reference_code(cls):
+        """Build the next sequential booking reference for the current year.
+
+        Codes look like "HJ-2026-0001": the year is embedded so they stay
+        meaningful when sorted, and the retry loop guards against a collision
+        caused by a hand-edited code.
+
+        Returns:
+            str: A reference code not yet in use.
+        """
         prefix = f'HJ-{timezone.now().year}-'
         last = (
             cls.objects.filter(reference_code__startswith=prefix)
@@ -202,10 +290,22 @@ class Booking(models.Model):
 
     @property
     def status_label(self):
+        """Return the Arabic label for the current status.
+
+        Returns:
+            str: e.g. 'قيد المراجعة'; falls back to the raw value if unknown.
+        """
         return BookingStatus(self.status).label if self.status in BookingStatus.values else self.status
 
     @property
     def status_message(self):
+        """Return the customer-facing sentence for the current status.
+
+        Used by the tracking page to explain what happens next.
+
+        Returns:
+            str: Arabic message, or '' for an unrecognised status.
+        """
         return {
             BookingStatus.PENDING: 'حجزك قيد المراجعة، سنتواصل معك خلال 24 ساعة',
             BookingStatus.CONFIRMED: 'سيتم التواصل معك قريباً',
@@ -214,6 +314,7 @@ class Booking(models.Model):
         }.get(self.status, '')
 
 
+# Countries offered in the review form dropdown.
 REVIEW_COUNTRIES = [
     ('مصر', 'مصر'),
     ('السعودية', 'السعودية'),
@@ -242,6 +343,7 @@ REVIEW_COUNTRIES = [
     ('أستراليا', 'أستراليا'),
 ]
 
+# Flag emoji per country, so reviews render without an image request.
 COUNTRY_FLAGS = {
     'مصر': '🇪🇬',
     'السعودية': '🇸🇦',
@@ -272,6 +374,8 @@ COUNTRY_FLAGS = {
 
 
 class Review(models.Model):
+    """A customer review, moderated before it appears on the public site."""
+
     name = models.CharField('اسم العميل', max_length=255)
     country = models.CharField(
         'الدولة', max_length=100, choices=REVIEW_COUNTRIES, default='مصر'
@@ -311,22 +415,44 @@ class Review(models.Model):
     ip_address = models.GenericIPAddressField('عنوان IP', null=True, blank=True)
 
     class Meta:
+        """List reviews newest first in the admin."""
         ordering = ['-created_at']
         verbose_name = 'رأي عميل'
         verbose_name_plural = 'آراء العملاء'
 
     def __str__(self):
+        """Return "name — stars" for admin lists."""
         return f'{self.name} — {'⭐' * self.rating}'
 
     @property
     def country_flag(self):
+        """Return the flag emoji for the review's country.
+
+        Returns:
+            str: Flag emoji, or '' when the country has no mapping.
+        """
         return COUNTRY_FLAGS.get(self.country, '')
 
     def __init__(self, *args, **kwargs):
+        """Snapshot the photo name so save() can detect replacements.
+
+        Args:
+            *args: Positional args forwarded to Model.
+            **kwargs: Keyword args forwarded to Model.
+        """
         super().__init__(*args, **kwargs)
         self._original_photo = self.photo.name if self.photo else None
 
     def save(self, *args, **kwargs):
+        """Save the review, normalising the photo and deleting the old file.
+
+        Args:
+            *args: Positional args forwarded to Model.save().
+            **kwargs: Keyword args forwarded to Model.save().
+
+        Returns:
+            None
+        """
         adding = self._state.adding
         uploaded = self.photo.name if self.photo else None
         photo_changed = adding or uploaded != self._original_photo
@@ -338,6 +464,11 @@ class Review(models.Model):
         self._original_photo = self.photo.name if self.photo else None
 
     def _normalize_photo(self):
+        """Re-encode the review photo at REVIEW_PHOTO_MAX and swap the file.
+
+        Returns:
+            None
+        """
         if not self.photo:
             return
         result = _normalize_image(self.photo, REVIEW_PHOTO_MAX)
@@ -351,6 +482,12 @@ class Review(models.Model):
 
 
 class SiteSettings(models.Model):
+    """Singleton row (pk=1) holding the editable site copy and contacts.
+
+    Every hero and section title lives here so staff can edit the homepage
+    text from the dashboard without a deploy. Always read it via load().
+    """
+
     company = models.CharField('اسم الشركة', max_length=255, default='الطوخي للحج والعمرة')
     phone = models.CharField('رقم الهاتف', max_length=50, blank=True)
     whatsapp = models.CharField('رقم الواتساب بصيغة دولية', max_length=50, blank=True)
@@ -372,11 +509,18 @@ class SiteSettings(models.Model):
     section_order = models.JSONField(default=list)
 
     class Meta:
+        """The settings row has no natural ordering, so keep it unsorted."""
         verbose_name = 'بيانات الموقع'
         verbose_name_plural = 'بيانات الموقع'
 
     @classmethod
     def load(cls):
+        """Return the singleton settings row, creating and seeding it if absent.
+
+        Returns:
+            SiteSettings: The single row with pk=1. On first call it is created
+                and ``section_order`` is given the default homepage order.
+        """
         obj, _ = cls.objects.get_or_create(pk=1)
         if not obj.section_order:
             obj.section_order = ['hero', 'trips', 'why', 'cta']
@@ -384,4 +528,5 @@ class SiteSettings(models.Model):
         return obj
 
     def __str__(self):
+        """Return the company name (admin list label)."""
         return self.company

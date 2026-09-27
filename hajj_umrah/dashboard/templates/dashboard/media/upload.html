@@ -1,0 +1,60 @@
+{#
+The upload form for a single image, on its own page.
+Rendered by: dashboard.views.media_upload
+Context: form (MediaForm), title, page='media'
+The drop zone is wired up by static/dashboard/js/dashboard.js (#file-drop).
+#}
+{% extends 'dashboard/base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ title }}</h1>
+    <p>اختر صورة من جهازك، وسيظهر مسارها في مكتبة الوسائط فوراً.</p>
+  </div>
+</div>
+
+<form method="post" enctype="multipart/form-data" novalidate>
+  {% csrf_token %}
+  {% if form.errors %}
+    <div class="form-errors">يرجى تصحيح الأخطاء بالأسفل قبل الرفع.</div>
+  {% endif %}
+
+  <div class="panel">
+    <div class="panel-head"><h3>بيانات الملف</h3></div>
+    <div class="panel-body">
+      <div class="form-grid">
+        <div class="form-group">
+          {{ form.title.label_tag }}
+          {{ form.title }}
+          {% if form.title.errors %}<span class="field-error">{{ form.title.errors.0 }}</span>{% endif %}
+        </div>
+        <div class="form-group">
+          {{ form.alt.label_tag }}
+          {{ form.alt }}
+          {% if form.alt.errors %}<span class="field-error">{{ form.alt.errors.0 }}</span>{% endif %}
+          <span class="help">يُستخدم في نص الصورة البديل للضعف البصري إن لم يوجد.</span>
+        </div>
+        <div class="form-group full">
+          {{ form.file.label_tag }}
+          {{ form.file }}
+          <label class="file-drop" for="{{ form.file.id_for_label }}">
+            <span class="big">🖼️</span>
+            اسحب الصورة هنا أو اضغط للاختيار
+            <em>لم يتم اختيار ملف</em>
+          </label>
+          {% if form.file.errors %}<span class="field-error">{{ form.file.errors.0 }}</span>{% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-actions">
+    <button class="btn" type="submit">💾 رفع</button>
+    <a class="btn btn-ghost" href="{% url 'dashboard:media' %}">إلغاء</a>
+  </div>
+</form>
+{% endblock %}

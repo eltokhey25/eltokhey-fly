@@ -1,4 +1,12 @@
-"""Diagnose Groq connectivity: available models, key, and a live test turn."""
+"""
+core/management/commands/check_groq.py
+A `python manage.py check_groq` health check for the AI chatbot.
+
+It answers the three questions that explain almost every chatbot failure:
+is the key found, which models can that key actually use, and does a real
+message get a real answer back through the fallback chain.
+Nothing in the app imports this; it is a diagnostic tool only.
+"""
 import time
 
 import requests
@@ -17,9 +25,21 @@ from core.chatbot import (
 
 
 class Command(BaseCommand):
+    """Report the chatbot's Groq configuration and prove it answers.
+
+    Prints the resolved key (truncated), the .env path, every model the key
+    can use, which of them are in MODEL_FALLBACKS, and then sends one test
+    message down the chain until one replies.
+    """
+
     help = 'Check GROQ_API_KEY, list available models, and run one test message.'
 
     def add_arguments(self, parser):
+        """Register the command's flags.
+
+        Args:
+            parser (CommandParser): The argument parser to fill in.
+        """
         parser.add_argument(
             '--models', action='store_true',
             help='List every model the key can use (default: on).',
@@ -30,6 +50,16 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
+        """Run the checks and print a report.
+
+        Args:
+            *args: Unused positional args.
+            **options: Parsed flags: `message`, `models`.
+
+        Raises:
+            CommandError: When the key is missing, the models endpoint is
+                unreachable, or no model in the chain returns a reply.
+        """
         self.stdout.write(self.style.MIGRATE_HEADING('--- Groq chatbot check ---'))
 
         root = settings.PROJECT_ROOT

@@ -1,3 +1,14 @@
+"""
+core/tests.py
+The public-site test suite: pages, bookings, reviews, the AI chatbot,
+the chat HTTP API, WhatsApp notifications and API-key resolution.
+
+Two habits run through the whole file and are worth knowing before adding
+to it: every test that would call Groq mocks core.chatbot.requests, and
+every test that depends on ordering builds its own trips in setUpTestData
+so a test never inherits another test's rows.
+"""
+
 import json
 import requests
 import os
@@ -29,8 +40,12 @@ from .views import CHAT_RATE_LIMIT_MESSAGE
 
 
 class PageViewTests(TestCase):
+    """Smoke tests for the public pages and the booking form."""
+
     @classmethod
     def setUpTestData(cls):
+        """Create two active trips and one inactive trip, once per class."""
+
         Trip.objects.create(
             name='رحلة تجريبية',
             slug='trip-test',
@@ -50,26 +65,36 @@ class PageViewTests(TestCase):
         SiteSettings.load()
 
     def test_home_renders_trips(self):
+        """The homepage lists the active trips."""
+
         resp = self.client.get(reverse('core:home'))
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, 'رحلة تجريبية')
 
     def test_trips_list(self):
+        """The trips page lists the active trips."""
+
         resp = self.client.get(reverse('core:trips'))
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, 'رحلة تجريبية')
 
     def test_trip_detail(self):
+        """A trip detail page renders for a known slug."""
+
         resp = self.client.get(reverse('core:trip_detail', args=['trip-test']))
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, 'برنامج السير بالتفصيل')
         self.assertContains(resp, 'الانطلاق')
 
     def test_about_and_booking_pages(self):
+        """The about and booking pages both render."""
+
         self.assertEqual(self.client.get(reverse('core:about')).status_code, 200)
         self.assertEqual(self.client.get(reverse('core:booking')).status_code, 200)
 
     def test_booking_post_valid(self):
+        """A valid booking POST creates a booking and redirects."""
+
         resp = self.client.post(reverse('core:booking'), {
             'hu_booking_submit': '1',
             'hu_name': 'محمد أحمد',
@@ -83,6 +108,8 @@ class PageViewTests(TestCase):
         self.assertEqual(Booking.objects.filter(phone='01000000000').count(), 1)
 
     def test_booking_post_invalid(self):
+        """An invalid booking POST re-renders the form with errors."""
+
         resp = self.client.post(reverse('core:booking'), {
             'hu_booking_submit': '1',
             'hu_name': '',
@@ -91,6 +118,8 @@ class PageViewTests(TestCase):
         self.assertContains(resp, 'من فضلك أدخل الاسم ورقم الهاتف')
 
     def test_inactive_trip_hidden(self):
+        """An inactive trip is hidden from the public pages."""
+
         Trip.objects.create(name='مخفية', slug='hidden', is_active=False)
         resp = self.client.get(reverse('core:home'))
         self.assertNotContains(resp, 'مخفية')
@@ -107,6 +136,8 @@ class ChatCostControlTests(TestCase):
     """
 
     def setUp(self):
+        """Clear the reply cache and stub the API key for every test."""
+
         cache.clear()
         self.addCleanup(cache.clear)
         patcher = mock.patch('core.chatbot._resolve_api_key', return_value='test-key')
@@ -114,6 +145,15 @@ class ChatCostControlTests(TestCase):
         self.addCleanup(patcher.stop)
 
     def ok(self, content='العمرة بـ 37900 جنيه'):
+        """Build a fake 200 Groq response.
+
+        Args:
+            content (str): The assistant text the "model" returns.
+
+        Returns:
+            mock.Mock: A response shaped like requests' Response.
+        """
+
         r = mock.Mock()
         r.status_code = 200
         r.headers = {}
@@ -127,12 +167,16 @@ class ChatCostControlTests(TestCase):
     # --- trip list gating ---
 
     def test_greeting_does_not_send_the_trip_list(self):
+        """A greeting is answered without paying for the trip list."""
+
         with mock.patch('core.chatbot.requests.post', return_value=self.ok()) as post:
             get_chatbot_response('السلام عليكم')
         system = post.call_args.kwargs['json']['messages'][0]['content']
         self.assertNotIn('=== الرحلات', system)
 
     def test_trip_question_sends_the_trip_list(self):
+        """A question about a trip does send the trip list."""
+
         with mock.patch('core.chatbot.requests.post', return_value=self.ok()) as post:
             get_chatbot_response('عايز أعرف الرحلات')
         system = post.call_args.kwargs['json']['messages'][0]['content']
@@ -148,11 +192,19 @@ class ChatCostControlTests(TestCase):
         self.assertTrue(_should_include_trips('المواعيد Available؟'))
 
     def test_unrelated_messages_do_not_pay_for_trips(self):
+        """Small talk never pays for the trip list."""
+
         for msg in ['السلام عليكم', 'مين انت', 'ازيك', 'شكرا', '']:
             with self.subTest(msg=msg):
                 self.assertFalse(_should_include_trips(msg))
 
     def test_greeting_prompt_is_much_smaller_than_the_full_one(self):
+        """A greeting prompt is dramatically smaller than the full one.
+
+        This is the test that protects the 6000 tokens/minute budget: it
+        fails loudly if someone puts the trip list back into every prompt.
+        """
+
         for i in range(4):
             Trip.objects.create(
                 name=f'رحلة {i}', slug=f'prompt-size-{i}', is_active=True,
@@ -167,6 +219,8 @@ class ChatCostControlTests(TestCase):
     # --- response cache ---
 
     def test_repeated_question_is_answered_once(self):
+        """Asking the same short question twice costs one Groq call."""
+
         with mock.patch('core.chatbot.requests.post', return_value=self.ok()) as post:
             first = get_chatbot_response('الأسعار')
             second = get_chatbot_response('الأسعار')
@@ -203,6 +257,8 @@ class ChatCostControlTests(TestCase):
         self.assertEqual(len(outputs), 1, f'cache key is not stable: {outputs}')
 
     def test_long_or_contextual_questions_are_not_cached(self):
+        """Long or conversational questions are never cached."""
+
         long_question = 'عايز اعرف ' + ('تفاصيل دقيقة عن البرنامج ' * 6)
         self.assertGreater(len(long_question), 60)
         with mock.patch('core.chatbot.requests.post', return_value=self.ok()) as post:
@@ -216,6 +272,8 @@ class ChatCostControlTests(TestCase):
                          'only the bare short question may be served from cache')
 
     def test_booking_request_is_never_cached(self):
+        """A booking request is never cached, so no stale offer is reused."""
+
         with mock.patch('core.chatbot.requests.post', return_value=self.ok('تمام')) as post:
             get_chatbot_response('عايز احجز')
             get_chatbot_response('عايز احجز')
@@ -233,6 +291,8 @@ class ChatCostControlTests(TestCase):
         self.assertLess(len(sent), 8, 'history must be dropped to fit 900 tokens')
 
     def test_history_is_kept_when_it_fits(self):
+        """History that fits the model context is passed through intact."""
+
         history = [{'role': 'user', 'content': 'مرحبا'}] * 3
         with mock.patch('core.chatbot.requests.post', return_value=self.ok()) as post:
             get_chatbot_response('الأسعار', history)
@@ -242,6 +302,8 @@ class ChatCostControlTests(TestCase):
     # --- model chain ---
 
     def test_chain_starts_with_the_cheapest_model(self):
+        """The fallback chain starts with the cheapest model."""
+
         self.assertEqual(GROQ_MODEL, 'allam-2-7b')
         with mock.patch('core.chatbot.requests.post', return_value=self.ok()) as post:
             get_chatbot_response('الأسعار')
@@ -258,6 +320,7 @@ class ChatApiErrorShapeTests(TestCase):
     """The widget branches on these, so their shape is part of the contract."""
 
     def setUp(self):
+        """Clear the cache, so a cached reply cannot mask a 429 response."""
         cache.clear()
 
     def test_rate_limited_request_still_returns_json(self):
@@ -278,9 +341,13 @@ class ChatPageTests(TestCase):
     """The mobile chat is a real page the floating launcher navigates to."""
 
     def setUp(self):
+        """Log in a staff user, since the chat page needs no permissions."""
+
         SiteSettings.load()
 
     def test_chat_page_renders_thread(self):
+        """The chat page renders its thread container."""
+
         resp = self.client.get(reverse('core:chat_page'))
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, 'مساعد الطوخي الذكي')
@@ -343,18 +410,28 @@ class ChatPageTests(TestCase):
 
 @override_settings(DEBUG=False)
 class NotFoundTests(TestCase):
+    """The custom 404 handler."""
+
     def test_custom_404(self):
+        """An unknown URL returns the branded 404 page."""
+
         resp = self.client.get('/this-path-does-not-exist/')
         self.assertEqual(resp.status_code, 404)
         self.assertContains(resp, 'الصفحة غير موجودة', status_code=404)
 
 
 class AdminTests(TestCase):
+    """The Django admin."""
+
     def setUp(self):
+        """Log in a superuser for the admin tests."""
+
         get_user_model().objects.create_superuser('admin', 'admin@example.com', 'secret123')
         SiteSettings.load()
 
     def test_admin_accessible(self):
+        """The admin index is reachable for a superuser."""
+
         self.client.login(username='admin', password='secret123')
         self.assertEqual(self.client.get('/admin/').status_code, 200)
         self.assertEqual(self.client.get('/admin/core/trip/').status_code, 200)
@@ -362,8 +439,12 @@ class AdminTests(TestCase):
 
 @override_settings(ADMIN_NOTIFICATION_EMAIL='admin@example.com')
 class BookingEmailTests(TestCase):
+    """Booking notifications by email."""
+
     @classmethod
     def setUpTestData(cls):
+        """Patch the mail outbox and store the booking POST payload."""
+
         Trip.objects.create(
             name='رحلة تجريبية',
             slug='trip-test',
@@ -380,6 +461,12 @@ class BookingEmailTests(TestCase):
         SiteSettings.load()
 
     def _post_booking(self, email='customer@example.com'):
+        """POST a booking and return the created Booking.
+
+        Returns:
+            Booking: The booking the public form just created.
+        """
+
         return self.client.post(reverse('core:booking'), {
             'hu_booking_submit': '1',
             'hu_name': 'محمد أحمد',
@@ -392,6 +479,8 @@ class BookingEmailTests(TestCase):
         })
 
     def test_booking_sends_admin_and_customer_emails(self):
+        """A booking with an email address sends one admin and one customer email."""
+
         with mock.patch('core.views.send_mail') as mock_send:
             resp = self._post_booking()
 
@@ -404,6 +493,8 @@ class BookingEmailTests(TestCase):
         self.assertIn((mock.ANY, mock.ANY, None, ['customer@example.com']), sent)
 
     def test_booking_without_email_sends_only_admin_email(self):
+        """A booking with no email address still notifies the admin."""
+
         with mock.patch('core.views.send_mail') as mock_send:
             resp = self._post_booking(email='')
 
@@ -416,6 +507,8 @@ class BookingEmailTests(TestCase):
             self.assertIn(field, body)
 
     def test_email_failure_does_not_break_booking(self):
+        """A failing mail backend does not lose the booking."""
+
         with mock.patch('core.views.logger'), \
                 mock.patch('core.views.send_mail', side_effect=Exception('SMTP down')):
             resp = self._post_booking()
@@ -425,19 +518,31 @@ class BookingEmailTests(TestCase):
 
 
 class BookingTrackingTests(TestCase):
+    """The public booking-tracking page."""
+
     @classmethod
     def setUpTestData(cls):
+        """Create the trips used by the tracking tests."""
+
         SiteSettings.load()
         Trip.objects.create(
             name='رحلة تتبع', slug='track-trip', trip_type='umrah', is_active=True
         )
 
     def _make_booking(self, name='أحمد', phone='01012345678'):
+        """Create a booking with sensible defaults.
+
+        Returns:
+            Booking: The unsaved booking.
+        """
+
         return Booking.objects.create(
             name=name, phone=phone, trip_label='رحلة تتبع — 2026-12-10'
         )
 
     def test_reference_code_auto_generated_and_unique(self):
+        """Every booking gets a unique reference code automatically."""
+
         b1 = self._make_booking()
         b2 = self._make_booking()
         self.assertRegex(b1.reference_code, r'^HJ-\d{4}-\d{4}$')
@@ -447,6 +552,8 @@ class BookingTrackingTests(TestCase):
         )
 
     def test_booking_created_message_includes_reference_code(self):
+        """The "booking created" WhatsApp message carries the reference code."""
+
         with mock.patch('core.views.send_whatsapp') as ws, \
                 mock.patch('core.views._send_booking_emails'):
             self.client.post(reverse('core:booking'), {
@@ -460,6 +567,8 @@ class BookingTrackingTests(TestCase):
         self.assertIn(booking.reference_code, ws.call_args.args[1])
 
     def test_tracking_finds_by_code(self):
+        """Tracking by reference code finds the booking."""
+
         booking = self._make_booking()
         resp = self.client.get(reverse('core:track_booking'), {'q': booking.reference_code})
         self.assertEqual(resp.status_code, 200)
@@ -468,6 +577,8 @@ class BookingTrackingTests(TestCase):
         self.assertContains(resp, 'قيد المراجعة')
 
     def test_tracking_finds_by_phone(self):
+        """Tracking by phone number finds the booking."""
+
         booking = self._make_booking()
         resp = self.client.get(reverse('core:track_booking'), {'q': booking.phone})
         self.assertEqual(resp.status_code, 200)
@@ -475,11 +586,15 @@ class BookingTrackingTests(TestCase):
         self.assertContains(resp, booking.name)
 
     def test_tracking_unknown_code_shows_message(self):
+        """An unknown reference code shows a message instead of a result."""
+
         resp = self.client.get(reverse('core:track_booking'), {'q': 'HJ-2000-9999'})
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, 'لم نعثر على حجز مطابق')
 
     def test_tracking_confirmed_booking(self):
+        """A confirmed booking shows its status on the tracking page."""
+
         booking = self._make_booking()
         booking.status = BookingStatus.CONFIRMED
         booking.save()
@@ -489,6 +604,12 @@ class BookingTrackingTests(TestCase):
         self.assertContains(resp, 'تم التأكيد')
 
     def _wa_text(self, resp):
+        """Return the text encoded in a WhatsApp deep link.
+
+        Returns:
+            str: The decoded message the link would send.
+        """
+
         content = resp.content.decode()
         for chunk in content.split('class="track-wa"')[1:]:
             href = chunk.split('href="')[1].split('"')[0]
@@ -496,6 +617,8 @@ class BookingTrackingTests(TestCase):
         return ''
 
     def test_tracking_confirmed_has_prefilled_whatsapp_link(self):
+        """A confirmed booking offers a prefilled WhatsApp link."""
+
         settings = SiteSettings.load()
         settings.whatsapp = '+20 100 1234567'
         settings.save()
@@ -515,6 +638,8 @@ class BookingTrackingTests(TestCase):
         self.assertIn('برجاء تزويدي بتفاصيل الدفع والمواعيد النهائية', message)
 
     def test_tracking_pending_has_prefilled_whatsapp_link(self):
+        """A pending booking offers a prefilled WhatsApp link."""
+
         settings = SiteSettings.load()
         settings.whatsapp = '+20 100 1234567'
         settings.save()
@@ -532,6 +657,8 @@ class BookingTrackingTests(TestCase):
         self.assertIn('برجاء إفادتي بحالة الحجز', message)
 
     def test_tracking_completed_booking(self):
+        """A completed booking shows the completed status."""
+
         booking = self._make_booking()
         booking.status = BookingStatus.COMPLETED
         booking.save()
@@ -540,7 +667,11 @@ class BookingTrackingTests(TestCase):
 
 
 class BookingActionTests(TestCase):
+    """The dashboard confirm / reject / complete actions."""
+
     def setUp(self):
+        """Create a staff user, a pending booking and a patched WhatsApp sender."""
+
         self.user = get_user_model().objects.create_user(
             'staff', 'staff@example.com', 'pass123', is_staff=True
         )
@@ -549,6 +680,8 @@ class BookingActionTests(TestCase):
         self.booking = Booking.objects.create(name='محمد', phone='01000000000', trip_label='رحلة')
 
     def test_confirm_updates_status_and_sends_whatsapp(self):
+        """Confirming sets the status and sends the WhatsApp message."""
+
         with mock.patch('dashboard.views.send_whatsapp') as ws:
             resp = self.client.post(reverse('dashboard:booking_confirm', args=[self.booking.pk]))
         self.assertRedirects(resp, reverse('dashboard:booking_detail', args=[self.booking.pk]))
@@ -561,6 +694,8 @@ class BookingActionTests(TestCase):
         self.assertIn(self.booking.reference_code, ws.call_args.args[1])
 
     def test_reject_updates_status_and_sends_whatsapp(self):
+        """Rejecting sets the status and sends the WhatsApp message."""
+
         with mock.patch('dashboard.views.send_whatsapp') as ws:
             resp = self.client.post(reverse('dashboard:booking_reject', args=[self.booking.pk]))
         self.assertRedirects(resp, reverse('dashboard:booking_detail', args=[self.booking.pk]))
@@ -570,6 +705,8 @@ class BookingActionTests(TestCase):
         self.assertIn('❌', ws.call_args.args[1])
 
     def test_complete_updates_status(self):
+        """Completing sets the status without sending a message."""
+
         self.booking.status = BookingStatus.CONFIRMED
         self.booking.save()
         resp = self.client.post(reverse('dashboard:booking_complete', args=[self.booking.pk]))
@@ -578,10 +715,14 @@ class BookingActionTests(TestCase):
         self.assertEqual(self.booking.status, BookingStatus.COMPLETED)
 
     def test_confirm_requires_post(self):
+        """Confirming via GET is not allowed."""
+
         resp = self.client.get(reverse('dashboard:booking_confirm', args=[self.booking.pk]))
         self.assertEqual(resp.status_code, 405)
 
     def test_booking_list_status_filter(self):
+        """The booking list can be filtered by status."""
+
         pending = self.booking
         confirmed = Booking.objects.create(
             name='سعيد', phone='01011111111', status=BookingStatus.CONFIRMED
@@ -593,14 +734,24 @@ class BookingActionTests(TestCase):
 
 
 class ReviewTests(TestCase):
+    """Customer reviews: submission, moderation and homepage display."""
+
     @classmethod
     def setUpTestData(cls):
+        """Create the trip the reviews will be attached to."""
+
         cls.trip = Trip.objects.create(
             name='رحلة مراجعات', slug='reviews-trip', trip_type='umrah', is_active=True
         )
         SiteSettings.load()
 
     def _make(self, name, status, rating=5, with_trip=False):
+        """Create a review.
+
+        Returns:
+            Review: The unsaved review.
+        """
+
         return Review.objects.create(
             name=name,
             country='مصر',
@@ -611,6 +762,8 @@ class ReviewTests(TestCase):
         )
 
     def test_only_approved_reviews_appear_on_list(self):
+        """Only approved reviews appear on the public reviews page."""
+
         self._make('منشور أحمد', ReviewStatus.APPROVED)
         self._make('قيد محمد', ReviewStatus.PENDING)
         self._make('مرفوض حاتم', ReviewStatus.REJECTED)
@@ -621,11 +774,15 @@ class ReviewTests(TestCase):
         self.assertNotContains(resp, 'مرفوض حاتم')
 
     def test_reviews_list_page_with_trip_name(self):
+        """The reviews page shows the trip name on each review."""
+
         self._make('منشور مع رحلة', ReviewStatus.APPROVED, with_trip=True)
         resp = self.client.get(reverse('core:reviews'))
         self.assertContains(resp, 'رحلة مراجعات')
 
     def test_submit_creates_pending_review_and_redirects(self):
+        """Submitting a review stores it as pending and redirects."""
+
         resp = self.client.post(reverse('core:review_submit'), {
             'name': 'أحمد محمود',
             'country': 'مصر',
@@ -642,6 +799,8 @@ class ReviewTests(TestCase):
         self.assertContains(follow, 'شكراً لك')
 
     def test_rate_limit_one_submission_per_ip_per_24h(self):
+        """One submission per IP per 24 hours; the rest are rate limited."""
+
         for i in range(2):
             resp = self.client.post(reverse('core:review_submit'), {
                 'name': f'مستخدم {i}',
@@ -654,6 +813,8 @@ class ReviewTests(TestCase):
         self.assertEqual(Review.objects.count(), 1)
 
     def test_honeypot_blocks_spam(self):
+        """A filled honeypot field silently swallows the submission."""
+
         self.client.post(reverse('core:review_submit'), {
             'name': 'روبوت',
             'country': 'مصر',
@@ -664,6 +825,8 @@ class ReviewTests(TestCase):
         self.assertEqual(Review.objects.count(), 0)
 
     def test_submit_requires_rating(self):
+        """A review without a rating is rejected."""
+
         resp = self.client.post(reverse('core:review_submit'), {
             'name': 'بدون تقييم',
             'country': 'مصر',
@@ -674,6 +837,8 @@ class ReviewTests(TestCase):
         self.assertContains(resp, 'اختر تقييمك')
 
     def test_pagination_12_per_page(self):
+        """The reviews page paginates 12 per page."""
+
         for i in range(13):
             Review.objects.create(
                 name=f'عميل {i}', country='مصر', rating=5,
@@ -685,6 +850,8 @@ class ReviewTests(TestCase):
         self.assertContains(resp, 'صفحات الآراء')
 
     def test_home_shows_reviews_after_hero_with_button_when_more_than_three(self):
+        """More than three approved reviews adds a "see all" button."""
+
         for i in range(4):
             self._make(f'منشور الصفحة الرئيسية {i}', ReviewStatus.APPROVED, with_trip=(i == 0))
         self._make('قيد مخفي', ReviewStatus.PENDING)
@@ -699,6 +866,8 @@ class ReviewTests(TestCase):
         self.assertLess(html.find('آراء عملائنا'), html.find('id="trips"'))
 
     def test_home_reviews_section_hidden_without_approved(self):
+        """With no approved reviews the homepage hides the section."""
+
         resp = self.client.get(reverse('core:home'))
         html = resp.content.decode()
         self.assertNotContains(resp, 'ثقة عملائنا هي رأس مالنا')
@@ -706,6 +875,8 @@ class ReviewTests(TestCase):
         self.assertNotEqual(html.find('id="trips"'), -1)
 
     def test_home_reviews_button_hidden_when_three_or_less(self):
+        """Three or fewer reviews hide the "see all" button."""
+
         for i in range(3):
             self._make(f'رأي {i}', ReviewStatus.APPROVED)
         resp = self.client.get(reverse('core:home'))
@@ -714,8 +885,12 @@ class ReviewTests(TestCase):
         self.assertNotContains(resp, 'شاهد كل الآراء')
 
 class TripPublicOrderingTests(TestCase):
+    """The public pages must follow the dashboard's manual trip order."""
+
     @classmethod
     def setUpTestData(cls):
+        """Create trips whose creation order is the opposite of `order`."""
+
         SiteSettings.load()
         Trip.objects.create(
             name='الرحلة الأولى', slug='pord-1', trip_type='umrah', order=0, is_active=True
@@ -728,18 +903,24 @@ class TripPublicOrderingTests(TestCase):
         )
 
     def test_home_orders_trips_by_order_field(self):
+        """The homepage lists trips by the `order` field."""
+
         resp = self.client.get(reverse('core:home'))
         html = resp.content.decode()
         self.assertLess(html.find('الرحلة الأولى'), html.find('الرحلة الثانية'))
         self.assertLess(html.find('الرحلة الثانية'), html.find('الرحلة الثالثة'))
 
     def test_trips_list_orders_trips_by_order_field(self):
+        """The trips page lists trips by the `order` field."""
+
         resp = self.client.get(reverse('core:trips'))
         html = resp.content.decode()
         self.assertLess(html.find('الرحلة الأولى'), html.find('الرحلة الثانية'))
         self.assertLess(html.find('الرحلة الثانية'), html.find('الرحلة الثالثة'))
 
     def test_public_lists_respect_toggled_hidden_ordering(self):
+        """The hidden-then-active ordering switch is respected."""
+
         Trip.objects.filter(slug='pord-2').update(is_active=False)
         resp = self.client.get(reverse('core:home'))
         html = resp.content.decode()
@@ -752,15 +933,25 @@ class ChatbotPromptTests(TestCase):
     """The prompt is customer-facing data: no blanks, no 'None', no dup units."""
 
     def setUp(self):
+        """Make sure the trip list is empty so prompts are predictable."""
+
         # 0002_seed_data creates demo trips; the assertions below are about
         # exactly which trips end up in the prompt, so start from a clean slate.
         Trip.objects.all().delete()
 
     def _trips_block(self):
+        """Return just the trip section of the system prompt.
+
+        Returns:
+            str: The text between the trip block markers.
+        """
+
         prompt = build_system_prompt(include_trips=True)
         return prompt[prompt.index('=== الرحلات'):prompt.index('=== نهاية')]
 
     def test_inactive_trips_are_excluded(self):
+        """Inactive trips never reach the prompt."""
+
         Trip.objects.create(
             name='رحلة منشورة', slug='chat-on', is_active=True,
             price='1000', duration='5 يوم',
@@ -771,6 +962,8 @@ class ChatbotPromptTests(TestCase):
         self.assertNotIn('رحلة مخفية', block)
 
     def test_blank_fields_are_labelled_not_printed_as_none(self):
+        """Blank fields are labelled, never printed as "None"."""
+
         Trip.objects.create(name='ناقصة', slug='chat-blank', is_active=True)
         block = self._trips_block()
         self.assertNotIn('None', block)
@@ -787,6 +980,8 @@ class ChatbotPromptTests(TestCase):
         self.assertIn('بلا سعر', block)
 
     def test_duration_unit_is_not_duplicated(self):
+        """A duration that already has a unit does not get a second one."""
+
         Trip.objects.create(
             name='مكتوبة', slug='chat-dur-1', is_active=True, duration='15 يوم'
         )
@@ -799,6 +994,8 @@ class ChatbotPromptTests(TestCase):
         self.assertNotIn('يوم يوم', block)
 
     def test_seeded_dates_are_formatted_iso(self):
+        """Dates are formatted as ISO strings, not Python date reprs."""
+
         Trip.objects.create(
             name='مواعيد', slug='chat-dates', is_active=True,
             departure='2026-12-10', return_date='2026-12-24', remaining=15,
@@ -809,18 +1006,26 @@ class ChatbotPromptTests(TestCase):
         self.assertIn('الأماكن: 15 مكان', block)
 
     def test_prompt_tells_model_not_to_invent_a_price(self):
+        """The prompt tells the model never to invent a price."""
+
         prompt = build_system_prompt(include_trips=True)
         self.assertIn('لو الرحلة ليس لها سعر محدد', prompt)
         self.assertIn('السعر قريباً', prompt)
         self.assertIn('201095454012', prompt)
 
     def test_no_active_trips_falls_back_to_placeholder(self):
+        """With no trips the prompt says so instead of leaving an empty block."""
+
         block = self._trips_block()
         self.assertIn('لا توجد رحلات متاحة', block)
 
 
 class ChatbotResponseTests(TestCase):
+    """get_chatbot_response: the happy path and the failure paths."""
+
     def setUp(self):
+        """Clear the cache and make sure a real API key is never required."""
+
         # The response cache is file-backed and outlives the test database, so a
         # real answer cached by an earlier test would answer this one instead of
         # the mock.
@@ -843,10 +1048,14 @@ class ChatbotResponseTests(TestCase):
     @override_settings(GROQ_API_KEY='')
     @mock.patch.dict(os.environ, {}, clear=True)
     def test_missing_api_key_returns_arabic_fallback(self):
+        """A missing API key returns the Arabic "unavailable" fallback."""
+
         reply = get_chatbot_response('ايش عندكم؟')
         self.assertIn('201095454012', reply)
 
     def test_timeout_and_error_return_fallbacks(self):
+        """Timeouts and connection errors return Arabic fallbacks, not exceptions."""
+
         import requests
 
         with mock.patch('core.chatbot.requests.post', side_effect=requests.exceptions.Timeout):
@@ -858,11 +1067,15 @@ class ChatbotResponseTests(TestCase):
             self.assertIn('201095454012', get_chatbot_response('x'))
 
     def test_successful_reply_is_returned(self):
+        """A successful call returns the model's content."""
+
         with mock.patch('core.chatbot.requests.post', return_value=self.fake_response('  أهلاً بك  ')):
             reply = get_chatbot_response('ايش عندكم؟')
         self.assertEqual(reply, 'أهلاً بك')
 
     def test_history_is_trimmed_to_last_six(self):
+        """Only the last six history messages are sent."""
+
         history = [{'role': 'user', 'content': f'm{i}'} for i in range(20)]
         with mock.patch('core.chatbot.requests.post', return_value=self.fake_response()) as post:
             get_chatbot_response('سؤال', history)
@@ -872,6 +1085,8 @@ class ChatbotResponseTests(TestCase):
         self.assertEqual(sent[-1]['content'], 'سؤال')
 
     def test_malformed_history_entries_are_ignored(self):
+        """Malformed history entries are dropped instead of raising."""
+
         history = ['nope', {'role': 'system', 'content': 'x'}, {'role': 'user', 'content': 'y'}]
         with mock.patch('core.chatbot.requests.post', return_value=self.fake_response()) as post:
             get_chatbot_response('سؤال', history)
@@ -880,7 +1095,11 @@ class ChatbotResponseTests(TestCase):
 
 
 class ChatApiTests(TestCase):
+    """POST /api/chat/: CSRF, parsing and the spend caps."""
+
     def setUp(self):
+        """Reset the rate-limit counters and stub the chatbot reply."""
+
         cache.clear()
         self.url = reverse('core:chat_api')
         # The chatbot endpoint must keep CSRF protection, and Django's default
@@ -896,6 +1115,17 @@ class ChatApiTests(TestCase):
         return self.client.cookies['csrftoken'].value
 
     def _post(self, payload=None, csrf=True, **extra):
+        """POST a JSON payload to the chat API.
+
+        Args:
+            payload (dict | None): Body to send; a default greeting when None.
+            csrf (bool): Attach a valid CSRF token when True.
+            **extra: Extra client kwargs (headers, REMOTE_ADDR …).
+
+        Returns:
+            django.test.Client: The HTTP response.
+        """
+
         if csrf:
             extra.setdefault('HTTP_X_CSRFTOKEN', self._prime_csrf())
         return self.client.post(
@@ -913,6 +1143,8 @@ class ChatApiTests(TestCase):
         call.assert_not_called()
 
     def test_post_with_csrf_token_is_accepted(self):
+        """A request carrying a valid CSRF token is accepted."""
+
         with mock.patch('core.views.get_chatbot_turn', return_value=('أهلاً', None)) as call:
             resp = self._post()
         self.assertEqual(resp.status_code, 200)
@@ -920,6 +1152,8 @@ class ChatApiTests(TestCase):
         call.assert_called_once()
 
     def test_get_is_not_allowed(self):
+        """GET on the chat API is not allowed."""
+
         self.assertEqual(self.client.get(self.url).status_code, 405)
 
     def test_page_exposes_csrf_token_for_the_widget(self):
@@ -938,6 +1172,8 @@ class ChatApiTests(TestCase):
         self.assertEqual(resp.status_code, 200)
 
     def test_empty_and_malformed_bodies_are_rejected(self):
+        """Empty and malformed JSON bodies are rejected."""
+
         token = self._prime_csrf()
         with mock.patch('core.views.get_chatbot_turn') as call:
             self.assertEqual(self._post({'message': '   '}).status_code, 400)
@@ -953,6 +1189,8 @@ class ChatApiTests(TestCase):
         call.assert_not_called()
 
     def test_per_ip_cap_is_enforced(self):
+        """The per-IP cap on chat messages is enforced."""
+
         with mock.patch('core.views.get_chatbot_turn', return_value=('أهلاً', None)):
             with override_settings(CHAT_RATE_LIMIT_PER_HOUR=3):
                 codes = [self._post(REMOTE_ADDR='1.2.3.4').status_code for _ in range(5)]
@@ -977,6 +1215,8 @@ class ChatApiTests(TestCase):
         self.assertIsNone(cache.get('chat_ip_6.6.6.0'))
 
     def test_untrusted_proxy_falls_back_to_remote_addr(self):
+        """An untrusted proxy header falls back to REMOTE_ADDR."""
+
         with mock.patch('core.views.get_chatbot_turn', return_value=('أهلاً', None)):
             with override_settings(TRUST_X_FORWARDED_FOR=False):
                 self._post(HTTP_X_FORWARDED_FOR='6.6.6.6', REMOTE_ADDR='1.2.3.4')
@@ -984,6 +1224,8 @@ class ChatApiTests(TestCase):
         self.assertIsNone(cache.get('chat_ip_6.6.6.6'))
 
     def test_global_cap_bounds_total_spend(self):
+        """The global cap bounds total spend even across many IPs."""
+
         with mock.patch('core.views.get_chatbot_turn', return_value=('أهلاً', None)):
             with override_settings(
                 CHAT_RATE_LIMIT_PER_HOUR=100, CHAT_RATE_LIMIT_GLOBAL_PER_HOUR=2
@@ -999,15 +1241,23 @@ class PriceDisplayTests(TestCase):
     """Every price surface (card, detail page, dashboard) reads price_display."""
 
     def test_missing_price_reads_as_coming_soon(self):
+        """A missing price reads as "coming soon"."""
+
         self.assertEqual(Trip(name='x').price_display, 'السعر قريباً')
 
     def test_numeric_price_keeps_thousands_separator(self):
+        """A numeric price keeps its thousands separator."""
+
         self.assertEqual(Trip(name='x', price='37900').price_display, '37,900 ج.م')
 
     def test_free_text_price_is_shown_verbatim(self):
+        """A free-text price is shown verbatim."""
+
         self.assertEqual(Trip(name='x', price='قريبا').price_display, 'قريبا')
 
     def test_templates_render_coming_soon_for_priceless_trip(self):
+        """The templates render "coming soon" for a priceless trip."""
+
         Trip.objects.all().delete()
         trip = Trip.objects.create(
             name='رحلة بلا سعر', slug='pd-1', is_active=True, price='',
@@ -1022,6 +1272,8 @@ class PriceDisplayTests(TestCase):
             self.assertNotIn('اكتب لنا', html, url)
 
     def test_missing_dates_degrade_gracefully(self):
+        """Missing dates degrade gracefully instead of raising."""
+
         Trip.objects.all().delete()
         trip = Trip.objects.create(name='بلا مواعيد', slug='pd-2', is_active=True)
         html = self.client.get(reverse('core:trip_detail', args=[trip.slug])).content.decode()
@@ -1033,11 +1285,15 @@ class ResolveApiKeyTests(TestCase):
     """The chatbot must find its key from whichever source the host provides."""
 
     def test_prefers_process_environment(self):
+        """The process environment wins over everything else."""
+
         with mock.patch.dict(os.environ, {'GROQ_API_KEY': 'from-env'}):
             with override_settings(GROQ_API_KEY='from-settings'):
                 self.assertEqual(_resolve_api_key(), 'from-env')
 
     def test_falls_back_to_django_settings(self):
+        """Django settings are used when the environment has no key."""
+
         with mock.patch.dict(os.environ, {}, clear=True):
             with override_settings(GROQ_API_KEY='from-settings'):
                 self.assertEqual(_resolve_api_key(), 'from-settings')
@@ -1052,6 +1308,8 @@ class ResolveApiKeyTests(TestCase):
                     self.assertEqual(_resolve_api_key(), 'from-dotenv-file')
 
     def test_returns_empty_and_logs_when_nothing_is_configured(self):
+        """With nothing configured the resolver returns empty and logs."""
+
         with tempfile.TemporaryDirectory() as tmp:
             with mock.patch.dict(os.environ, {}, clear=True):
                 with override_settings(GROQ_API_KEY='', PROJECT_ROOT=Path(tmp)):
@@ -1063,12 +1321,16 @@ class ResolveApiKeyTests(TestCase):
         )
 
     def test_missing_dotenv_is_reported_not_raised(self):
+        """A missing .env file is reported, not raised."""
+
         with tempfile.TemporaryDirectory() as tmp:
             with mock.patch.dict(os.environ, {}, clear=True):
                 with override_settings(GROQ_API_KEY='', PROJECT_ROOT=Path(tmp) / 'nope'):
                     self.assertEqual(_resolve_api_key(), '')
 
     def test_chatbot_falls_back_to_whatsapp_when_key_missing(self):
+        """With no key the chat API points the visitor at WhatsApp."""
+
         with tempfile.TemporaryDirectory() as tmp:
             with mock.patch.dict(os.environ, {}, clear=True):
                 with override_settings(GROQ_API_KEY='', PROJECT_ROOT=Path(tmp)):
@@ -1080,37 +1342,53 @@ class BookingIntentTests(TestCase):
     """Booking intent must be deterministic, not model-dependent."""
 
     def test_positive_intents(self):
+        """Clear booking phrasings all return the start_booking action."""
+
         for msg in ['عايز أحجز عمرة', 'احجزلي', 'أحجز', 'حجز', 'ابعتلي', 'سجلني', 'اكتبلي', 'نفسي أحجز']:
             with self.subTest(msg=msg):
                 self.assertEqual(detect_booking_intent(msg), 'start_booking')
 
     def test_arabic_orthography_variants(self):
+        """Orthography variants (إ/أ/آ, ى/ي) are still detected."""
+
         for msg in ['إحجزلي', 'احجز لى', 'نفسى احجز', 'ابغى حجز']:
             with self.subTest(msg=msg):
                 self.assertEqual(detect_booking_intent(msg), 'start_booking')
 
     def test_negative_intents(self):
+        """Ordinary questions do not trigger the booking action."""
+
         for msg in ['أسعار الحج', 'مفيش رحلة كويسة', 'مين رئيس مصر؟', '', None, 'السلام عليكم']:
             with self.subTest(msg=msg):
                 self.assertIsNone(detect_booking_intent(msg))
 
     def test_action_tag_is_stripped_from_reply(self):
+        """The model's JSON action tag is stripped from the reply text."""
+
         clean, action = _extract_action('يا سلام\n{"action": "start_booking"}\nهبدأ الحجز')
         self.assertEqual(action, 'start_booking')
         self.assertNotIn('action', clean)
         self.assertIn('هبدأ الحجز', clean)
 
     def test_plain_reply_has_no_action(self):
+        """A plain reply produces no action."""
+
         clean, action = _extract_action('السعر 37900 جنيه')
         self.assertEqual(clean, 'السعر 37900 جنيه')
         self.assertIsNone(action)
 
     def test_prompt_mentions_booking(self):
+        """The system prompt advertises the booking action to the model."""
+
         self.assertIn('start_booking', build_system_prompt())
 
 
 class ChatBookingApiTests(TestCase):
+    """POST /api/chat/booking/: creating a booking from the chat widget."""
+
     def setUp(self):
+        """Set up a staff user, a trip and a CSRF-primed client."""
+
         cache.clear()  # the hourly caps are file-backed and outlive the test
         self.trip = Trip.objects.create(
             name='عمرة اختبار', slug='omra-test', trip_type='عمرة', price='50000',
@@ -1126,11 +1404,19 @@ class ChatBookingApiTests(TestCase):
         }
 
     def post(self, **over):
+        """POST the booking payload, with per-test overrides.
+
+        Returns:
+            django.test.Client: The HTTP response.
+        """
+
         data = dict(self.payload)
         data.update(over)
         return self.client.post(self.url, data=json.dumps(data), content_type='application/json')
 
     def test_creates_booking_with_reference_code(self):
+        """A valid payload creates a booking with a reference code."""
+
         r = self.post()
         self.assertEqual(r.status_code, 201)
         body = r.json()
@@ -1143,6 +1429,8 @@ class ChatBookingApiTests(TestCase):
         self.assertEqual(booking.trip_label, 'عمرة اختبار')
 
     def test_sends_admin_and_customer_email(self):
+        """A created booking sends the admin and customer emails."""
+
         with override_settings(ADMIN_NOTIFICATION_EMAIL='admin@example.com'):
             self.post()
         self.assertEqual(len(mail.outbox), 2)
@@ -1150,31 +1438,47 @@ class ChatBookingApiTests(TestCase):
         self.assertEqual(Booking.objects.count(), 1)
 
     def test_requires_name(self):
+        """A missing name is rejected."""
+
         self.assertEqual(self.post(name='').status_code, 400)
 
     def test_rejects_bad_phone(self):
+        """A malformed phone number is rejected."""
+
         self.assertEqual(self.post(phone='abc').status_code, 400)
 
     def test_rejects_bad_email(self):
+        """A malformed email address is rejected."""
+
         self.assertEqual(self.post(email='nope').status_code, 400)
 
     def test_rejects_unknown_trip(self):
+        """An unknown trip id is rejected."""
+
         self.assertEqual(self.post(trip_id=99999).status_code, 400)
         self.assertEqual(Booking.objects.count(), 0)
 
     def test_trip_id_is_optional(self):
+        """The trip id is optional."""
+
         r = self.post(trip_id=None, trip_name='حج على حسب seas')
         self.assertEqual(r.status_code, 201)
         self.assertEqual(Booking.objects.get().trip_label, 'حج على حسب seas')
 
     def test_rejects_get(self):
+        """GET on the booking API is not allowed."""
+
         self.assertEqual(self.client.get(self.url).status_code, 405)
 
     def test_rejects_invalid_json(self):
+        """An unparseable JSON body is rejected."""
+
         r = self.client.post(self.url, data='{oops', content_type='application/json')
         self.assertEqual(r.status_code, 400)
 
     def test_people_is_clamped(self):
+        """The people count is clamped into a sane range."""
+
         r = self.post(number_of_people='9999')
         self.assertEqual(r.status_code, 201)
         self.assertEqual(Booking.objects.get().people, 50)
@@ -1187,6 +1491,8 @@ class ChatBookingApiTests(TestCase):
         self.assertEqual(Booking.objects.count(), 0)
 
     def test_works_with_csrf_token(self):
+        """The booking API works when a CSRF token is supplied."""
+
         c = Client(enforce_csrf_checks=True)
         c.get('/')
         token = c.cookies['csrftoken'].value
@@ -1201,7 +1507,11 @@ class ChatBookingApiTests(TestCase):
 
 
 class ChatTripsApiTests(TestCase):
+    """GET /api/chat/trips/: the trip list the chatbot quotes from."""
+
     def test_returns_only_active_trips(self):
+        """Only active trips are returned."""
+
         Trip.objects.create(name='نشطة', slug='active-one', is_active=True)
         Trip.objects.create(name='مخفية', slug='hidden-one', is_active=False)
         r = self.client.get('/api/chat/trips/')
@@ -1211,6 +1521,8 @@ class ChatTripsApiTests(TestCase):
         self.assertNotIn('مخفية', names)
 
     def test_includes_price_display(self):
+        """Each trip includes a display-ready price."""
+
         Trip.objects.create(name='بغير سعر', slug='no-price', price='', is_active=True)
         r = self.client.get('/api/chat/trips/')
         self.assertTrue(r.json()['trips'][-1]['price_display'])
@@ -1220,12 +1532,24 @@ class GroqErrorHandlingTests(TestCase):
     """Each Groq failure mode must map to its own message and log line."""
 
     def setUp(self):
+        """Clear the cache so rate-limit fallbacks are never replayed."""
+
         cache.clear()
         patcher = mock.patch('core.chatbot._resolve_api_key', return_value='test-key')
         patcher.start()
         self.addCleanup(patcher.stop)
 
     def reply_for(self, side_effect=None, return_value=None):
+        """Call the chatbot with requests.post mocked.
+
+        Args:
+            side_effect (list): Per-call exception or response to raise/return.
+            return_value (mock.Mock): Single response returned every call.
+
+        Returns:
+            str: The reply the visitor would see.
+        """
+
         with mock.patch('core.chatbot.requests.post', **({} if side_effect is None else {'side_effect': side_effect})):
             if side_effect is None:
                 with mock.patch('core.chatbot.requests.post', return_value=return_value):
@@ -1233,6 +1557,18 @@ class GroqErrorHandlingTests(TestCase):
             return get_chatbot_response('مرحبا')
 
     def fake(self, status=200, payload=None, text='', headers=None):
+        """Build a fake Groq response.
+
+        Args:
+            status (int): HTTP status code.
+            payload (dict): Decoded JSON body.
+            text (str): Raw body, for the error log.
+            headers (dict): Response headers, needed by the 429 path.
+
+        Returns:
+            mock.Mock: A response shaped like requests' Response.
+        """
+
         r = mock.Mock()
         r.status_code = status
         r.text = text
@@ -1243,10 +1579,22 @@ class GroqErrorHandlingTests(TestCase):
         return r
 
     def ok_payload(self, content='أهلاً', finish='stop'):
+        """Build a well-formed success body.
+
+        Args:
+            content (str): The assistant text.
+            finish (str): The finish_reason to report.
+
+        Returns:
+            dict: A JSON body Groq would have returned.
+        """
+
         return {'choices': [{'message': {'content': content}, 'finish_reason': finish}],
                 'usage': {'completion_tokens': 10}}
 
     def test_timeout_says_connection_is_slow(self):
+        """A timeout tells the visitor the connection is slow."""
+
         with self.assertLogs('core.chatbot', level='ERROR') as logs:
             reply = self.reply_for(side_effect=requests.exceptions.Timeout())
         self.assertIn('بطيء', reply)
@@ -1254,6 +1602,8 @@ class GroqErrorHandlingTests(TestCase):
         self.assertTrue(any('TIMEOUT' in line for line in logs.output), logs.output)
 
     def test_401_says_configuration_error_and_stops_early(self):
+        """A 401 is reported as a configuration error and stops the chain."""
+
         bad = self.fake(status=401, text='{"error":{"message":"invalid api key"}}')
         with self.assertLogs('core.chatbot', level='ERROR') as logs:
             with mock.patch('core.chatbot.requests.post', return_value=bad) as post:
@@ -1299,6 +1649,8 @@ class GroqErrorHandlingTests(TestCase):
         slept.assert_not_called()
 
     def test_429_exhausted_tells_the_visitor_to_wait(self):
+        """When every model is rate limited the visitor is told to wait."""
+
         limited = self.fake(status=429, text='{"error":{"message":"Rate limit reached"}}')
         with mock.patch('core.chatbot.requests.post', return_value=limited):
             reply = get_chatbot_response('مرحبا')
@@ -1307,6 +1659,8 @@ class GroqErrorHandlingTests(TestCase):
         self.assertNotIn('بطيء', reply)
 
     def test_429_retry_after_header_is_surfaced_to_the_visitor(self):
+        """A Retry-After header is surfaced to the visitor."""
+
         limited = self.fake(status=429, text='{"error":{"message":"Rate limit reached"}}')
         limited.headers = {'retry-after': '42'}
         with mock.patch('core.chatbot.requests.post', return_value=limited):
@@ -1325,6 +1679,8 @@ class GroqErrorHandlingTests(TestCase):
                          'a failure must never be served from cache')
 
     def test_empty_reasoning_reply_is_retried_not_shown_as_busy(self):
+        """An empty reasoning-only reply is retried, not shown as "busy"."""
+
         empty = self.fake(200, self.ok_payload(content='', finish='length'))
         good = self.fake(200, self.ok_payload(content='رد كامل'))
         with mock.patch('core.chatbot.requests.post', side_effect=[empty, good]):
@@ -1332,12 +1688,16 @@ class GroqErrorHandlingTests(TestCase):
         self.assertEqual(reply, 'رد كامل')
 
     def test_network_exception_logs_its_type(self):
+        """A network exception logs its exception type."""
+
         with self.assertLogs('core.chatbot', level='ERROR') as logs:
             reply = self.reply_for(side_effect=requests.exceptions.ConnectionError('boom'))
         self.assertIn('خطأ', reply)
         self.assertTrue(any('ConnectionError' in line for line in logs.output), logs.output)
 
     def test_malformed_json_is_a_parse_error(self):
+        """A malformed JSON body is treated as a parse error."""
+
         r = mock.Mock()
         r.status_code = 200
         r.text = 'not json'
@@ -1349,6 +1709,8 @@ class GroqErrorHandlingTests(TestCase):
         self.assertTrue(any('PARSE' in line for line in logs.output), logs.output)
 
     def test_request_uses_20s_timeout_and_larger_budget(self):
+        """The request uses the 20s timeout and the larger token budget."""
+
         with mock.patch('core.chatbot.requests.post', return_value=self.fake(200, self.ok_payload())) as post:
             get_chatbot_response('مرحبا')
         self.assertEqual(post.call_args.kwargs['timeout'], 20)

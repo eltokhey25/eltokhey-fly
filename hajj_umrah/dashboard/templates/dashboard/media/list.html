@@ -1,0 +1,91 @@
+{#
+The reusable image library: every uploaded file as a thumbnail card, plus the
+drop zone that uploads a new one.
+Rendered by: dashboard.views.media_list
+Context: files (MediaFile queryset), page='media'
+#}
+{% extends 'dashboard/base.html' %}
+
+{% block title %}مكتبة الوسائط{% endblock %}
+{% block page_title %}مكتبة الوسائط{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>مكتبة الوسائط</h1>
+    <p>الصور المرفوعة، جاهزة للاستخدام في الرحلات والأقسام.</p>
+  </div>
+  <a class="btn" href="{% url 'dashboard:media_upload' %}">⬆️ رفع ملف</a>
+</div>
+
+<form method="post" enctype="multipart/form-data" id="media-upload-form">
+  {% csrf_token %}
+  <div class="panel">
+    <div class="panel-head"><h3>رفع ملف جديد</h3></div>
+    <div class="panel-body">
+      <div class="form-grid">
+        <div class="form-group">
+          {{ form.title.label_tag }}
+          {{ form.title }}
+          {% if form.title.errors %}<span class="field-error">{{ form.title.errors.0 }}</span>{% endif %}
+        </div>
+        <div class="form-group">
+          {{ form.alt.label_tag }}
+          {{ form.alt }}
+          {% if form.alt.errors %}<span class="field-error">{{ form.alt.errors.0 }}</span>{% endif %}
+        </div>
+        <div class="form-group full">
+          {{ form.file.label_tag }}
+          {{ form.file }}
+          <label class="file-drop" for="{{ form.file.id_for_label }}">
+            <span class="big">🖼️</span>
+            اسحب الصورة هنا أو اضغط للاختيار
+            <em>لم يتم اختيار ملف</em>
+          </label>
+          {% if form.file.errors %}<span class="field-error">{{ form.file.errors.0 }}</span>{% endif %}
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn" type="submit">💾 رفع</button>
+      </div>
+    </div>
+  </div>
+</form>
+
+<div class="panel">
+  <div class="panel-head">
+    <h3>الملفات</h3>
+    <span class="muted">{{ files|length }} ملف</span>
+  </div>
+  <div class="panel-body">
+    {% if files %}
+      <div class="media-grid">
+        {% for file in files %}
+          <div class="media-item">
+            <div class="media-thumb">
+              {% if file.kind == 'صورة' %}
+                <img src="{{ file.file.url }}" alt="{{ file.alt }}" loading="lazy">
+              {% else %}
+                <span style="font-size:2.2rem;">📄</span>
+              {% endif %}
+            </div>
+            <div class="media-body">
+              <strong>{{ file }}</strong>
+              <span class="meta">{{ file.kind }} · {{ file.size_display }} · {{ file.uploaded_at|date:"Y-m-d" }}</span>
+              <div class="acts">
+                <a class="btn btn-ghost btn-sm" href="{{ file.file.url }}" target="_blank" rel="noopener">عرض</a>
+                <form method="post" action="{% url 'dashboard:media_delete' file.pk %}" data-confirm="حذف «{{ file }}» نهائياً؟">
+                  {% csrf_token %}
+                  <button class="btn btn-danger-ghost btn-sm" type="submit">حذف</button>
+                </form>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty"><span class="empty-ico">🖼️</span><p>لا توجد ملفات بعد. ارفع أول صورة من الأعلى.</p></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

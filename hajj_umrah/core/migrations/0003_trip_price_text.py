@@ -1,3 +1,7 @@
+"""
+Trip.price becomes a CharField: prices turned out to be marketing text
+("ابتداءً من 37900") far more often than they are a plain number.
+"""
 from django.db import migrations, models
 
 

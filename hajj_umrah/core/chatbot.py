@@ -1,3 +1,14 @@
+"""
+core/chatbot.py
+The AI assistant: prompt construction, the Groq call, the model fallback
+chain, the response cache and booking-intent detection.
+Consumed by: core/views.py (chat_api) and core/tests.py.
+Design notes worth reading before changing anything here:
+  * the Groq key this account can reach is capped at 6000 tokens/minute, so
+    every token sent is a token not available for the next visitor
+  * Groq rate limits are per model, which is what makes the fallback chain
+    in MODEL_FALLBACKS actually work
+"""
 import hashlib
 import json
 import logging
@@ -115,7 +126,18 @@ _ARABIC_FOLD = {
 
 
 def _fold(text):
-    """Normalise Arabic text and lowercase it, for keyword matching."""
+    """Normalise Arabic text and lowercase it so keywords match reliably.
+
+    Folds the orthographic variants listed in _ARABIC_FOLD (أ/إ/آ -> ا,
+    ى -> ي, ة -> ه …) and strips tatweel and zero-width joiners, so
+    "إحجز" and "أحجز" both contain the keyword "احجز".
+
+    Args:
+        text (str): Raw text from the visitor or a keyword.
+
+    Returns:
+        str: The folded, lowercased text.
+    """
     out = []
     for char in str(text or '').lower():
         out.append(_ARABIC_FOLD.get(char, char))
@@ -128,6 +150,12 @@ def detect_booking_intent(user_message):
     Plain keyword matching on purpose: the booking flow is a state machine the
     frontend drives, so it must trigger the same way every time instead of
     depending on how the model felt like phrasing its reply.
+
+    Args:
+        user_message (str): The visitor's message.
+
+    Returns:
+        str | None: BOOKING_ACTION ('start_booking') on a match, else None.
     """
     text = _fold(user_message)
     if not text:
@@ -145,6 +173,12 @@ def _extract_action(reply):
     The prompt lets the model emit a ``{"action": "start_booking"}`` tag when it
     spots booking intent on its own. That tag is machine data, so it is removed
     from the text before the visitor ever sees it.
+
+    Args:
+        reply (str): Raw model output.
+
+    Returns:
+        tuple[str, str | None]: (text to show the visitor, action or None).
     """
     action = None
     cleaned = reply
@@ -165,6 +199,12 @@ def _format_duration(value):
 
     ``Trip.duration`` is free text and normally already carries the unit (e.g.
     "15 يوم"), so the unit is only appended when it is missing.
+
+    Args:
+        value (str): The raw Trip.duration value.
+
+    Returns:
+        str: Duration with a unit, or '' when there is no value at all.
     """
     text = str(value or '').strip()
     if not text:
@@ -180,6 +220,12 @@ def build_system_prompt(include_trips=False):
     tokens against a 6000 tokens/minute ceiling, for a chatbot whose next
     question is usually "السلام عليكم". Greetings and small talk now skip it
     entirely (see :func:`_should_include_trips`).
+
+    Args:
+        include_trips (bool): Append the live trip list when True.
+
+    Returns:
+        str: The Arabic system prompt.
     """
     # Kept deliberately tight. Every token here is charged on every request.
     base = f"""أنت "مساعد الطوخي للحج والعمرة" — متخصص ONLY في رحلات الحج والعمرة المتاحة على موقعنا، أسعارها، الحجز، والتواصل.
@@ -247,6 +293,12 @@ def _should_include_trips(message):
 
     Keyword-based on purpose, and deliberately cheap: it is the difference
     between spending ~800 prompt tokens per greeting and spending ~250.
+
+    Args:
+        message (str): The visitor's message.
+
+    Returns:
+        bool: True when the message is about trips, prices or booking.
     """
     text = _fold(message)
     if not text:
@@ -260,6 +312,13 @@ def _retry_after_seconds(response, default=DEFAULT_RETRY_AFTER):
     ``retry-after`` is a plain number, but the x-ratelimit-reset-* headers look
     like "290ms" or "12.342s", so both shapes are parsed. Anything unusable
     falls back to a sane wait rather than telling the visitor to retry in 0s.
+
+    Args:
+        response (requests.Response): The 429 response from Groq.
+        default (int): Fallback wait in seconds when no header parses.
+
+    Returns:
+        int: Seconds to wait, clamped to 1..120.
     """
     candidates = [
         response.headers.get('retry-after'),
@@ -283,7 +342,15 @@ def _retry_after_seconds(response, default=DEFAULT_RETRY_AFTER):
 
 
 def rate_limit_reply(response=None):
-    """The user-facing 429 message, with the real wait when Groq gave one."""
+    """Build the user-facing "we are busy" message.
+
+    Args:
+        response (requests.Response | None): The 429 response, when there was
+            one, so the real wait can be quoted back to the visitor.
+
+    Returns:
+        str: Arabic retry message.
+    """
     if response is None:
         return RATE_LIMIT_REPLY
     seconds = _retry_after_seconds(response)
@@ -331,7 +398,17 @@ def _resolve_api_key():
 
 
 def _error_body(response, limit=300):
-    """Readable error text from a failed Groq response, for the logs."""
+    """Extract readable error text from a failed Groq response.
+
+    Prefers the structured error.message field and falls back to the raw body.
+
+    Args:
+        response (requests.Response): The failed response.
+        limit (int): Maximum characters kept, to keep logs readable.
+
+    Returns:
+        str: A short error description for the log line.
+    """
     try:
         payload = response.json()
         err = payload.get('error') if isinstance(payload, dict) else None
@@ -359,7 +436,20 @@ def _cache_key(user_message):
 
 
 def _cacheable(user_message, conversation_history, reply):
-    """Only a short, self-contained, genuinely successful answer is reusable."""
+    """Decide whether a reply may be stored and replayed later.
+
+    A reply is reusable only when it is a real answer (not one of the failure
+    texts), the question was short and self-contained, and no booking intent
+    is involved.
+
+    Args:
+        user_message (str): The question that produced the reply.
+        conversation_history (list | None): History sent with the turn.
+        reply (str): The model's answer.
+
+    Returns:
+        bool: True when the answer is safe to cache.
+    """
     if not reply or reply in _UNCACHEABLE:
         return False
     if conversation_history:
@@ -379,6 +469,16 @@ def _build_messages(user_message, conversation_history=None, include_trips=None,
     without the trip list. History is also trimmed against the *model's* own
     context window: a 4096-token model would reject a long conversation that a
     131k one would happily take.
+
+    Args:
+        user_message (str): The visitor's message.
+        conversation_history (list | None): Earlier {role, content} dicts.
+        include_trips (bool | None): Force the trip block on/off; None decides
+            from the message keywords.
+        model (str | None): Model name, used to pick the context window.
+
+    Returns:
+        list[dict]: The messages array to POST to Groq.
     """
     if include_trips is None:
         include_trips = _should_include_trips(user_message)
@@ -411,7 +511,17 @@ def _build_messages(user_message, conversation_history=None, include_trips=None,
 
 
 def _approx_tokens(messages):
-    """Cheap token estimate: Arabic averages ~2.2 characters per token."""
+    """Estimate the token cost of a payload without calling a tokenizer.
+
+    Arabic averages roughly 2.2 characters per token; 4 tokens are added per
+    message for the role and formatting overhead.
+
+    Args:
+        messages (list[dict]): The payload to measure.
+
+    Returns:
+        int: Approximate token count, used only for trimming decisions.
+    """
     total = 0
     for m in messages:
         total += len(m.get('content') or '') / 2.2
@@ -421,10 +531,11 @@ def _approx_tokens(messages):
 
 def get_chatbot_response(user_message, conversation_history=None):
     """
-    Send message to Groq API and return the response.
+    Send a user message to the AI and return the reply.
 
-    conversation_history: list of {role, content} dicts (optional, last 6 only).
-    Never raises: every failure path returns a user-facing Arabic fallback.
+    Walks MODEL_FALLBACKS on failure, answers short repeated questions from
+    cache, and never raises: every failure path returns a user-facing Arabic
+    fallback string instead.
 
     Token discipline is the whole point of this function. The account is capped
     at 6000 tokens/minute, and a turn here costs prompt tokens (the system
@@ -433,6 +544,15 @@ def get_chatbot_response(user_message, conversation_history=None):
     the question is about trips, a short repeated question is answered from
     cache for free, and a 429 immediately moves to the next model instead of
     sleeping on a bucket that is already empty.
+
+    Args:
+        user_message (str): The visitor's message, in Arabic.
+        conversation_history (list | None): Optional list of previous
+            {role, content} dicts; only the last MAX_HISTORY_MESSAGES are sent.
+
+    Returns:
+        str: The assistant's reply in Arabic, or a friendly fallback message
+            (unavailable / busy / rate-limited / misconfigured) on any failure.
     """
     api_key = _resolve_api_key()
     if not api_key:
@@ -614,6 +734,13 @@ def get_chatbot_turn(user_message, conversation_history=None):
     Booking intent comes from :func:`detect_booking_intent` (deterministic) and
     from the model's own tag, so either signal alone is enough. The JSON tag is
     stripped from the reply either way, so it is never shown to the visitor.
+
+    Args:
+        user_message (str): The visitor's message.
+        conversation_history (list | None): Earlier {role, content} dicts.
+
+    Returns:
+        tuple[str, str | None]: (reply to display, booking action or None).
     """
     intent = detect_booking_intent(user_message)
     reply = get_chatbot_response(user_message, conversation_history)

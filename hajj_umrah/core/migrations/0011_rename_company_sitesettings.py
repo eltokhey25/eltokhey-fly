@@ -1,3 +1,6 @@
+"""
+Renames SiteSettings.company to a clearer field name.
+"""
 from django.db import migrations, models
 
 

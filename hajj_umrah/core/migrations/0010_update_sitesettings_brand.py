@@ -1,3 +1,6 @@
+"""
+Data migration: rewrites the seeded brand copy to the current wording.
+"""
 from django.db import migrations
 
 

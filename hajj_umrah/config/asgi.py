@@ -1,10 +1,9 @@
 """
-ASGI config for config project.
+config/asgi.py
+The asynchronous entry point: `application` is what uvicorn/daphne loads.
 
-It exposes the ASGI callable as a module-level variable named ``application``.
-
-For more information on this file, see
-https://docs.djangoproject.com/en/6.1/howto/deployment/asgi/
+Nothing in the project requires ASGI today; it is here so an async server can be
+dropped in later without touching a single view. See DEPLOY.md.
 """
 
 import os
