@@ -1,10 +1,10 @@
-{#
+{% extends 'base.html' %}
+{% comment %}
 The review submission form. Protected by a honeypot field and a
 one-submission-per-IP-per-24h rate limit.
 Rendered by: core.views.review_submit
 Context: form, trips
-#}
-{% extends 'base.html' %}
+{% endcomment %}
 {% load static %}
 
 {% block title %}اكتب رأيك | الطوخي للحج والعمرة{% endblock %}

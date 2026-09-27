@@ -1,8 +1,8 @@
-{#
+{% extends 'dashboard/base.html' %}
+{% comment %}
 One review before it is published.
 Rendered by: dashboard.views.review_detail
-#}
-{% extends 'dashboard/base.html' %}
+{% endcomment %}
 
 {% block title %}رأي — {{ review.name }}{% endblock %}
 {% block page_title %}تفاصيل الرأي{% endblock %}

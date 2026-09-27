@@ -1,10 +1,10 @@
-{#
+{% extends 'dashboard/base.html' %}
+{% comment %}
 The reusable image library: every uploaded file as a thumbnail card, plus the
 drop zone that uploads a new one.
 Rendered by: dashboard.views.media_list
 Context: files (MediaFile queryset), page='media'
-#}
-{% extends 'dashboard/base.html' %}
+{% endcomment %}
 
 {% block title %}مكتبة الوسائط{% endblock %}
 {% block page_title %}مكتبة الوسائط{% endblock %}

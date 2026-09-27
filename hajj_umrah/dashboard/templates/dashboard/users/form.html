@@ -1,9 +1,9 @@
-{#
+{% extends 'dashboard/base.html' %}
+{% comment %}
 Creates and edits a staff account, including the role fields.
 Rendered by: dashboard.views.user_create and dashboard.views.user_edit
 Context: form (UserForm)
-#}
-{% extends 'dashboard/base.html' %}
+{% endcomment %}
 
 {% block title %}{{ title }}{% endblock %}
 {% block page_title %}{{ title }}{% endblock %}

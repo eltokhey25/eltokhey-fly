@@ -1,9 +1,9 @@
-{#
+{% extends 'dashboard/base.html' %}
+{% comment %}
 Creates a booking by hand, for walk-ins and phone enquiries.
 Rendered by: dashboard.views.booking_create
 Context: form (BookingForm), trips
-#}
-{% extends 'dashboard/base.html' %}
+{% endcomment %}
 
 {% block title %}{{ title }}{% endblock %}
 {% block page_title %}{{ title }}{% endblock %}

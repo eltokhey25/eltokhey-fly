@@ -1,8 +1,8 @@
-{#
+{% extends 'dashboard/base.html' %}
+{% comment %}
 Shown when a signed-in user reaches a page their role does not allow.
 Rendered by: dashboard.views.permission_denied (handler403)
-#}
-{% extends 'dashboard/base.html' %}
+{% endcomment %}
 
 {% block title %}غير مصرح بالوصول{% endblock %}
 {% block page_title %}403 — غير مصرح{% endblock %}

@@ -1,9 +1,9 @@
-{#
+{% comment %}
 One trip card, shared by the homepage, the trips list and the related
 trip on the detail page.
 Included by: home.html, trips.html, trip_detail.html
 Context: trip
-#}
+{% endcomment %}
 {% load humanize %}
 <article class="trip-card reveal" data-type="{{ trip.trip_type }}">
   <div class="trip-card-media">

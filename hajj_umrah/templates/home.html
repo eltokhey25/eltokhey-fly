@@ -1,11 +1,11 @@
-{#
+{% extends 'base.html' %}
+{% comment %}
 The homepage: hero, the featured trips, why-us, the reviews strip and
 the closing call to action.
 Rendered by: core.views.home
 Includes: includes/trip_card.html, includes/review_card.html
 Context: trips, latest_reviews, review_count, has_more_reviews
-#}
-{% extends 'base.html' %}
+{% endcomment %}
 {% load static %}
 
 {% block title %}الطوخي للحج والعمرة | رحلات الحج والعمرة من مصر{% endblock %}

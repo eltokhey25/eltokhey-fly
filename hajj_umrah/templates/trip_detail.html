@@ -1,11 +1,11 @@
-{#
+{% extends 'base.html' %}
+{% comment %}
 One trip: dates, price, transport, itinerary, includes/excludes and the
 booking call to action.
 Rendered by: core.views.trip_detail
 Includes: includes/trip_card.html (for the related trip)
 Context: trip, related_trip
-#}
-{% extends 'base.html' %}
+{% endcomment %}
 {% load static %}
 {% load humanize %}
 
