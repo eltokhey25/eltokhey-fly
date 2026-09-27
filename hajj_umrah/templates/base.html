@@ -3,6 +3,19 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta name="csrf-token" content="{{ csrf_token }}">
+<script>
+/* Theme bootstrap — must run before any stylesheet paints so the page never
+   flashes the wrong theme. Kept inline (and tiny) on purpose. */
+(function() {
+  try {
+    var t = localStorage.getItem('theme');
+    if (t !== 'light' && t !== 'dark') {
+      t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    document.documentElement.setAttribute('data-theme', t);
+  } catch (e) {}
+})();
+</script>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-E84EC9JGHD"></script>
 <script>
@@ -123,8 +136,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'css/main.css' %}?v=3">
-  <link rel="stylesheet" href="{% static 'css/chatbot.css' %}?v=3">
+  <link rel="stylesheet" href="{% static 'css/main.css' %}?v=4">
+  <link rel="stylesheet" href="{% static 'css/chatbot.css' %}?v=4">
+  <script src="{% static 'js/theme.js' %}?v=1" defer></script>
   <script src="{% static 'js/main.js' %}" defer></script>
   {% block extra_js %}{% endblock %}
 </head>
@@ -170,6 +184,15 @@
         <li><a href="{% url 'core:track_booking' %}">تتبع حجزك</a></li>
         <li><a href="{% url 'core:about' %}">من نحن</a></li>
       </ul>
+      <button id="theme-toggle" class="theme-toggle" type="button" aria-label="تفعيل الوضع المظلم" aria-pressed="false" title="تفعيل الوضع المظلم">
+        <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <circle cx="12" cy="12" r="4.2"/>
+          <path d="M12 2.6v2.2M12 19.2v2.2M2.6 12h2.2M19.2 12h2.2M5.4 5.4l1.6 1.6M17 17l1.6 1.6M18.6 5.4 17 7M7 17l-1.6 1.6"/>
+        </svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/>
+        </svg>
+      </button>
       <a class="btn btn-gold nav-cta" href="{% url 'core:booking' %}">احجز الآن</a>
     </nav>
 
@@ -307,6 +330,6 @@ if ('serviceWorker' in navigator) {
 </script>
 
 {% include 'chatbot/widget.html' %}
-<script src="{% static 'js/chatbot.js' %}?v=3"></script>
+<script src="{% static 'js/chatbot.js' %}?v=4"></script>
 </body>
 </html>

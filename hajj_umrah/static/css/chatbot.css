@@ -723,3 +723,157 @@ body.chatbot-scroll-locked { overflow: hidden; }
   .chat-page { animation: none; }
   .chat-fab:hover { transform: none; }
 }
+
+/* ==========================================================================
+   Dark theme — chat widget
+   --------------------------------------------------------------------------
+   Token driven: main.css owns the [data-theme="dark"] palette, this file only
+   maps the widget's hard-coded light surfaces onto those tokens.
+   ========================================================================== */
+.chatbot-window,
+.chatbot-messages,
+.chatbot-msg.bot,
+.chatbot-quick,
+.chatbot-quick button,
+.chatbot-input-area,
+.chatbot-typing,
+.chatbot-card,
+.chatbot-trip {
+  transition: background-color .25s ease, color .25s ease, border-color .25s ease;
+}
+
+.chat-fab__teaser {
+  transition: opacity .35s ease, translate .35s cubic-bezier(.22, 1, .36, 1),
+    background-color .25s ease, color .25s ease, border-color .25s ease;
+}
+
+[data-theme="dark"] .chat-fab__teaser {
+  background: var(--surface);
+  color: var(--ink);
+  border-color: var(--border);
+}
+
+[data-theme="dark"] .chat-fab__teaser::after {
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+[data-theme="dark"] .chatbot-window {
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+[data-theme="dark"] .chatbot-messages,
+[data-theme="dark"] .chatbot-quick {
+  background: var(--bg-soft);
+}
+
+[data-theme="dark"] .chatbot-msg.bot {
+  background: var(--bg-soft);
+  color: var(--ink);
+  border-color: var(--border);
+}
+
+[data-theme="dark"] .chatbot-msg.error {
+  background: var(--danger-bg);
+  border-color: var(--danger-border);
+  color: var(--danger-ink);
+}
+
+[data-theme="dark"] .chatbot-empty__art {
+  color: var(--primary-text);
+  background: radial-gradient(circle at 32% 26%, #0f3b37, #0a2a28);
+}
+
+[data-theme="dark"] .chatbot-empty__title,
+[data-theme="dark"] .chatbot-card-title,
+[data-theme="dark"] .chatbot-trip-name {
+  color: var(--ink);
+}
+
+[data-theme="dark"] .chatbot-empty__sub,
+[data-theme="dark"] .chatbot-card-sub,
+[data-theme="dark"] .chatbot-field .opt {
+  color: var(--ink-soft);
+}
+
+[data-theme="dark"] .chatbot-quick button {
+  background: var(--bg-soft);
+  border-color: rgba(20, 184, 166, 0.4);
+  color: var(--primary-text);
+}
+
+[data-theme="dark"] .chatbot-input-area {
+  background: var(--surface);
+  border-top-color: var(--border);
+}
+
+[data-theme="dark"] .chatbot-input {
+  background: var(--bg-soft);
+  border-color: var(--border);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .chatbot-input:focus {
+  background: var(--bg-soft);
+  border-color: var(--primary-500);
+}
+
+[data-theme="dark"] .chatbot-typing {
+  background: var(--bg-soft);
+  border-color: var(--border);
+}
+
+[data-theme="dark"] .chatbot-card {
+  background: var(--bg-soft);
+  border-color: var(--border);
+}
+
+[data-theme="dark"] .chatbot-trip {
+  background: var(--bg);
+  border-color: var(--border);
+}
+
+[data-theme="dark"] .chatbot-trip-price,
+[data-theme="dark"] .chatbot-ref {
+  color: var(--primary-text);
+}
+
+[data-theme="dark"] .chatbot-btn.ghost {
+  background: var(--surface);
+  border-color: var(--primary-text);
+  color: var(--primary-text);
+}
+
+[data-theme="dark"] .chatbot-btn.ghost:hover {
+  background: var(--primary-600);
+  border-color: var(--primary-600);
+  color: #fff;
+}
+
+[data-theme="dark"] .chatbot-field label {
+  color: var(--body);
+}
+
+[data-theme="dark"] .chatbot-field input,
+[data-theme="dark"] .chatbot-field textarea {
+  background: var(--bg-soft);
+  border-color: var(--border);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .chatbot-form-error {
+  color: var(--danger-ink);
+}
+
+[data-theme="dark"] .chatbot-summary-row {
+  border-bottom-color: var(--border);
+}
+
+[data-theme="dark"] .chatbot-summary-row span:first-child {
+  color: var(--ink-soft);
+}
+
+[data-theme="dark"] .chatbot-summary-row span:last-child {
+  color: var(--ink);
+}

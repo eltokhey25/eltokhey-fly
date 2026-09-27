@@ -47,17 +47,50 @@
   --gray-800: #1e293b;
   --gray-900: #0f172a;
 
+  /* ---- Theme tokens (light = default; the dark set lives in
+          [data-theme="dark"] further down this file) ---- */
+  --bg: #ffffff;
+  --bg-soft: #f8fafc;
+  --surface: #ffffff;
   --ink: #0f172a;
   --body: #334155;
-  --muted: #64748b;
+  --ink-soft: #64748b;
+  --muted: var(--ink-soft);
+  --border: #e2e8f0;
+  --primary: #0d9488;
+  --accent: #f59e0b;
+
+  /* Emerald used as readable *text* (links, headings) — brighter on dark. */
+  --primary-text: var(--primary-700);
+  --primary-text-hover: var(--primary-800);
+  --primary-emphasis: var(--primary-600);
+  --accent-text: var(--gold-600);
+
+  /* Form fields, hover tints and inverse surfaces. */
+  --field-bg: #f8fafc;
+  --hover-tint: #f1f5f9;
+  --inverse: #0f172a;
+  --inverse-hover: #1e293b;
+  --inverse-ink: #ffffff;
+  --tooltip-bg: #0f172a;
+  --tooltip-ink: #e2e8f0;
+  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  --shadow-header: 0 2px 14px rgba(15, 23, 42, 0.08);
+  --footer-bg: linear-gradient(180deg, #0b1322 0%, #0f172a 100%);
 
   /* ---- Semantic ---- */
   --success: #16a34a;
   --success-bg: #dcfce7;
+  --success-ink: #166534;
+  --success-border: #bbf7d0;
   --danger: #dc2626;
   --danger-bg: #fee2e2;
+  --danger-ink: #991b1b;
+  --danger-border: #fecaca;
   --pending: #d97706;
   --pending-bg: #fef3c7;
+  --pending-ink: #92400e;
+  --pending-border: var(--gold-100);
   --info: #2563eb;
   --info-bg: #dbeafe;
 
@@ -112,6 +145,132 @@
 }
 
 /* ==========================================================================
+   Dark theme
+   --------------------------------------------------------------------------
+   Applied through <html data-theme="dark">. main.css is shared by the public
+   site only — the dashboard ships its own stylesheet and never sets
+   data-theme, so it stays light.
+   ========================================================================== */
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* ---- Theme tokens ---- */
+  --bg: #0b1220;
+  --bg-soft: #0f172a;
+  --surface: #131c2f;
+  --ink: #f1f5f9;
+  --body: #cbd5e1;
+  --ink-soft: #94a3b8;
+  --border: #1e293b;
+  --primary: #14b8a6;
+  --accent: #fbbf24;
+  --primary-text: #14b8a6;
+  --primary-text-hover: #2dd4bf;
+  --primary-emphasis: #14b8a6;
+  --accent-text: var(--accent);
+  --field-bg: #0f172a;
+  --hover-tint: #1b2740;
+  --inverse: #f1f5f9;
+  --inverse-hover: #e2e8f0;
+  --inverse-ink: #0b1220;
+  --tooltip-bg: #1b2740;
+  --tooltip-ink: #e2e8f0;
+  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23cbd5e1' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  --shadow-header: 0 2px 14px rgba(0, 0, 0, 0.55);
+  --footer-bg: linear-gradient(180deg, #0a0f1c 0%, #070b14 100%);
+
+  /* ---- Navy surfaces (header strip, dark sections, drawer, footer) ---- */
+  --navy: #0a0f1c;
+  --navy-700: #131c2f;
+  --navy-800: #16203a;
+  --navy-900: #070c17;
+
+  /* ---- Neutrals retuned for dark surfaces ---- */
+  --gray-50: #0f172a;
+  --gray-100: #16203a;
+  --gray-200: #1e293b;
+  --gray-300: #3b4a63;
+  --gray-400: #64748b;
+  --gray-500: #94a3b8;
+  --gray-600: #cbd5e1;
+  --gray-700: #dbe3ee;
+  --gray-800: #1e293b;
+  --gray-900: #0f172a;
+
+  /* ---- Emerald / gold tints: the pale washes become deep teal + amber ---- */
+  --primary-50: #0a2a28;
+  --primary-100: #0f3b37;
+  --primary-200: #134e4a;
+  --primary-900: #ccfbf1;
+  --gold-50: #2b2408;
+  --gold-100: #3a2f0a;
+
+  /* ---- Semantic alerts ---- */
+  --success-bg: rgba(22, 163, 74, 0.16);
+  --success-ink: #86efac;
+  --success-border: rgba(22, 163, 74, 0.38);
+  --danger-bg: rgba(220, 38, 38, 0.16);
+  --danger-ink: #fca5a5;
+  --danger-border: rgba(220, 38, 38, 0.38);
+  --pending-bg: rgba(217, 119, 6, 0.16);
+  --pending-ink: #fcd34d;
+  --pending-border: rgba(217, 119, 6, 0.38);
+
+  /* ---- Shadows read stronger on dark surfaces ---- */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.45), 0 4px 14px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 4px 6px -2px rgba(0, 0, 0, 0.5), 0 10px 24px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55), 0 4px 8px rgba(0, 0, 0, 0.35);
+  --shadow-xl: 0 24px 52px rgba(0, 0, 0, 0.6);
+  --shadow-primary: 0 8px 22px rgba(20, 184, 166, 0.28);
+  --shadow-gold: 0 8px 22px rgba(251, 191, 36, 0.3);
+  --glass: rgba(19, 28, 47, 0.8);
+}
+
+/* A few dark-only adjustments the token swap cannot cover on its own. */
+[data-theme="dark"] .btn-light {
+  background: var(--surface);
+  color: var(--primary-text);
+  box-shadow: var(--shadow-md);
+}
+
+[data-theme="dark"] .btn-light:hover {
+  background: var(--hover-tint);
+  color: var(--primary-text-hover);
+}
+
+[data-theme="dark"] .trust-item .trust-icon {
+  border-color: var(--primary-100);
+}
+
+/* ==========================================================================
+   Theme switching transitions
+   ========================================================================== */
+body,
+header,
+.card,
+.trip-card,
+.btn,
+input,
+textarea,
+select {
+  transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+}
+
+.header-top,
+.site-footer,
+.section-alt,
+.section-tint,
+.trip-card-media,
+.review-card,
+.page-link,
+.filter-btn,
+.flash-message,
+.pwa-prompt-inner {
+  transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+}
+
+/* ==========================================================================
    Base
    ========================================================================== */
 * {
@@ -134,7 +293,7 @@ body {
   color: var(--body);
   direction: rtl;
   text-align: right;
-  background-color: var(--gray-50);
+  background-color: var(--bg-soft);
   overflow-wrap: break-word;
   -webkit-font-smoothing: antialiased;
 }
@@ -146,13 +305,13 @@ img {
 }
 
 a {
-  color: var(--primary-700);
+  color: var(--primary-text);
   text-decoration: none;
   transition: color var(--transition);
 }
 
 a:hover {
-  color: var(--primary-800);
+  color: var(--primary-text-hover);
 }
 
 ul,
@@ -282,15 +441,15 @@ ol {
 
 .btn-outline {
   background: transparent;
-  border-color: var(--primary-700);
-  color: var(--primary-700);
+  border-color: var(--primary-text);
+  color: var(--primary-text);
   box-shadow: none;
 }
 
 .btn-outline:hover {
   background: var(--primary-50);
-  border-color: var(--primary-800);
-  color: var(--primary-800);
+  border-color: var(--primary-text-hover);
+  color: var(--primary-text-hover);
   box-shadow: none;
 }
 
@@ -310,13 +469,13 @@ ol {
 
 .btn-ghost {
   background: transparent;
-  color: var(--primary-700);
+  color: var(--primary-text);
   box-shadow: none;
 }
 
 .btn-ghost:hover {
   background: var(--primary-50);
-  color: var(--primary-800);
+  color: var(--primary-text-hover);
   box-shadow: none;
 }
 
@@ -350,6 +509,64 @@ ol {
   opacity: 0.55;
   cursor: not-allowed;
   transform: none;
+}
+
+/* ==========================================================================
+   Theme toggle (light <-> dark)
+   --------------------------------------------------------------------------
+   Lives in the header next to the gold CTA on desktop and inside the
+   hamburger drawer on mobile. The icon reflects the *current* theme; the
+   aria-label (set by theme.js) describes the action it will perform.
+   ========================================================================== */
+.theme-toggle {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  line-height: 0;
+  transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+}
+
+.theme-toggle:hover {
+  background: var(--hover-tint);
+  color: var(--primary-text);
+}
+
+.theme-toggle svg {
+  grid-area: 1 / 1;
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: opacity 0.2s ease, transform 0.25s ease;
+}
+
+/* Light theme -> show the sun, moon is hidden (and vice-versa) */
+.theme-toggle .icon-sun {
+  display: block;
+}
+
+.theme-toggle .icon-moon {
+  display: none;
+}
+
+[data-theme="dark"] .theme-toggle .icon-sun {
+  display: none;
+}
+
+[data-theme="dark"] .theme-toggle .icon-moon {
+  display: block;
 }
 
 /* ==========================================================================
@@ -412,10 +629,10 @@ ol {
   position: sticky;
   top: 0;
   z-index: 100;
-  background: #fff;
-  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
-  box-shadow: 0 2px 14px rgba(15, 23, 42, 0.08);
-  transition: box-shadow var(--transition);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow-header);
+  transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease, box-shadow var(--transition);
 }
 
 .header-main {
@@ -495,11 +712,16 @@ ol {
 }
 
 .main-nav a:hover {
-  color: var(--primary-700);
+  color: var(--primary-text);
 }
 
 .nav-cta {
   min-height: 44px;
+}
+
+/* Sits between the nav links and the gold CTA: pull it closer to the button. */
+.main-nav .theme-toggle {
+  margin-inline-end: calc(-1 * var(--space-4));
 }
 
 .nav-toggle {
@@ -686,8 +908,8 @@ body.error404 { --hero-img: url("../img/kaaba.jpg"); }
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: var(--space-4);
-  background: #fff;
-  border: 1px solid var(--gray-200);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   padding: var(--space-6);
@@ -737,7 +959,7 @@ body.error404 { --hero-img: url("../img/kaaba.jpg"); }
 }
 
 .section-alt {
-  background: #fff;
+  background: var(--bg);
 }
 
 .section-dark {
@@ -767,7 +989,7 @@ body.error404 { --hero-img: url("../img/kaaba.jpg"); }
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  color: var(--gold-600);
+  color: var(--accent-text);
   font-weight: 700;
   font-size: var(--fs-sm);
   margin-bottom: var(--space-2);
@@ -824,8 +1046,8 @@ body.error404 { --hero-img: url("../img/kaaba.jpg"); }
 }
 
 .filter-btn {
-  background: #fff;
-  border: 1.5px solid var(--gray-200);
+  background: var(--surface);
+  border: 1.5px solid var(--border);
   color: var(--gray-600);
   border-radius: var(--radius-full);
   padding: var(--space-2) var(--space-6);
@@ -864,12 +1086,12 @@ body.error404 { --hero-img: url("../img/kaaba.jpg"); }
   position: relative;
   display: flex;
   flex-direction: column;
-  background: #fff;
-  border: 1px solid var(--gray-200);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   overflow: hidden;
   box-shadow: var(--shadow);
-  transition: transform 250ms ease, box-shadow 250ms ease;
+  transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease, transform 250ms ease, box-shadow 250ms ease;
 }
 
 .trip-card:hover {
@@ -955,7 +1177,7 @@ body.error404 { --hero-img: url("../img/kaaba.jpg"); }
 }
 
 .trip-card-body h3 a:hover {
-  color: var(--primary-700);
+  color: var(--primary-text);
 }
 
 .trip-price-row {
@@ -969,7 +1191,7 @@ body.error404 { --hero-img: url("../img/kaaba.jpg"); }
 .trip-price {
   font-size: 1.6rem;
   font-weight: 800;
-  color: var(--primary-700);
+  color: var(--primary-text);
   line-height: 1.2;
 }
 
@@ -1032,12 +1254,12 @@ body.error404 { --hero-img: url("../img/kaaba.jpg"); }
 }
 
 .feature-card {
-  background: #fff;
-  border: 1px solid var(--gray-200);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: var(--space-8) var(--space-6);
   box-shadow: var(--shadow);
-  transition: transform var(--transition-slow), box-shadow var(--transition-slow), border-color var(--transition);
+  transition: background-color 0.25s ease, color 0.25s ease, border-color var(--transition-slow), transform var(--transition-slow), box-shadow var(--transition-slow);
 }
 
 .feature-card:hover {
@@ -1138,7 +1360,7 @@ body.error404 { --hero-img: url("../img/kaaba.jpg"); }
 }
 
 .trip-content h2 {
-  color: var(--primary-700);
+  color: var(--primary-text);
   margin: var(--space-8) 0 var(--space-4);
   font-size: 1.45rem;
   font-weight: 800;
@@ -1151,8 +1373,8 @@ body.error404 { --hero-img: url("../img/kaaba.jpg"); }
 }
 
 .trip-desc {
-  background: #fff;
-  border: 1px solid var(--gray-200);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: var(--space-6);
   box-shadow: var(--shadow);
@@ -1212,8 +1434,8 @@ body.error404 { --hero-img: url("../img/kaaba.jpg"); }
 }
 
 .timeline-card {
-  background: #fff;
-  border: 1px solid var(--gray-200);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: var(--space-4) var(--space-6);
   box-shadow: var(--shadow);
@@ -1227,7 +1449,7 @@ body.error404 { --hero-img: url("../img/kaaba.jpg"); }
 }
 
 .timeline-card .step-city {
-  color: var(--primary-600);
+  color: var(--primary-emphasis);
   font-weight: 700;
   font-size: var(--fs-sm);
 }
@@ -1243,8 +1465,8 @@ body.error404 { --hero-img: url("../img/kaaba.jpg"); }
 }
 
 .summary-box {
-  background: #fff;
-  border: 1px solid var(--gray-200);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   padding: var(--space-6);
@@ -1291,7 +1513,7 @@ body.error404 { --hero-img: url("../img/kaaba.jpg"); }
 .price-box .price {
   font-size: 2rem;
   font-weight: 800;
-  color: var(--primary-700);
+  color: var(--primary-text);
 }
 
 .summary-box .btn + .btn {
@@ -1345,7 +1567,7 @@ body.error404 { --hero-img: url("../img/kaaba.jpg"); }
 }
 
 .about-grid .trip-desc h2 span {
-  color: var(--primary-600);
+  color: var(--primary-emphasis);
 }
 
 .about-grid .trip-desc p {
@@ -1363,13 +1585,13 @@ body.error404 { --hero-img: url("../img/kaaba.jpg"); }
 }
 
 .stat-card {
-  background: #fff;
-  border: 1px solid var(--gray-200);
+  background: var(--surface);
+  border: 1px solid var(--border);
   text-align: center;
   padding: var(--space-8) var(--space-4);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow);
-  transition: transform var(--transition), box-shadow var(--transition);
+  transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease, transform var(--transition), box-shadow var(--transition);
 }
 
 .stat-card:hover {
@@ -1380,7 +1602,7 @@ body.error404 { --hero-img: url("../img/kaaba.jpg"); }
 .stat-card strong {
   font-size: 2.1rem;
   font-weight: 800;
-  color: var(--primary-700);
+  color: var(--primary-text);
   display: block;
   margin-bottom: var(--space-1);
 }
@@ -1398,8 +1620,8 @@ body.error404 { --hero-img: url("../img/kaaba.jpg"); }
 }
 
 .info-card {
-  background: #fff;
-  border: 1px solid var(--gray-200);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow);
   padding: var(--space-6);
@@ -1435,12 +1657,12 @@ body.error404 { --hero-img: url("../img/kaaba.jpg"); }
   width: 18px;
   height: 18px;
   flex: 0 0 auto;
-  color: var(--primary-600);
+  color: var(--primary-emphasis);
 }
 
 .contact-form {
-  background: #fff;
-  border: 1px solid var(--gray-200);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   padding: var(--space-8);
@@ -1460,13 +1682,13 @@ body.error404 { --hero-img: url("../img/kaaba.jpg"); }
   width: 100%;
   padding: var(--space-3) var(--space-4);
   border: 1.5px solid var(--gray-300);
-  background: var(--gray-50);
+  background: var(--field-bg);
   border-radius: var(--radius-sm);
   font-family: var(--font);
   font-size: var(--fs-base);
   color: var(--ink);
   margin-bottom: var(--space-4);
-  transition: border-color var(--transition), box-shadow var(--transition), background var(--transition);
+  transition: border-color var(--transition), box-shadow var(--transition), background var(--transition), color 0.25s ease;
 }
 
 .contact-form input::placeholder,
@@ -1485,13 +1707,13 @@ body.error404 { --hero-img: url("../img/kaaba.jpg"); }
 .contact-form select:focus {
   outline: none;
   border-color: var(--primary-600);
-  background: #fff;
+  background: var(--surface);
   box-shadow: 0 0 0 4px rgba(13, 148, 136, 0.15);
 }
 
 .contact-form select {
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-image: var(--select-arrow);
   background-repeat: no-repeat;
   background-position: left 14px center;
   padding-inline-start: var(--space-4);
@@ -1514,12 +1736,12 @@ body.error404 { --hero-img: url("../img/kaaba.jpg"); }
 
 .form-msg.ok {
   background: var(--success-bg);
-  color: var(--success);
+  color: var(--success-ink);
 }
 
 .form-msg.err {
   background: var(--danger-bg);
-  color: var(--danger);
+  color: var(--danger-ink);
 }
 
 /* ==========================================================================
@@ -1553,7 +1775,7 @@ body.error404 { --hero-img: url("../img/kaaba.jpg"); }
 .site-footer {
   background:
     radial-gradient(900px 420px at 15% -10%, rgba(13, 148, 136, 0.18), transparent 60%),
-    linear-gradient(180deg, var(--navy-900) 0%, var(--navy) 100%);
+    var(--footer-bg);
   color: #cbd5e1;
   border-top: 3px solid var(--primary-600);
 }
@@ -2144,6 +2366,21 @@ body.menu-open .fab {
     margin-top: var(--space-2);
   }
 
+  /* The toggle lives in the drawer on mobile — invert it for the navy panel
+     and center it above the CTA. */
+  .main-nav .theme-toggle {
+    margin-inline-end: 0;
+    align-self: center;
+    color: #e2e8f0;
+    border-color: rgba(255, 255, 255, 0.22);
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  .main-nav .theme-toggle:hover {
+    background: rgba(255, 255, 255, 0.14);
+    color: var(--gold-400);
+  }
+
   .nav-close {
     display: grid;
     place-items: center;
@@ -2312,14 +2549,14 @@ body.menu-open .fab {
   align-items: center;
   gap: var(--space-2);
   text-align: center;
-  background: var(--white);
-  border: 1px solid var(--gray-200);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 16px;
   padding: var(--space-6);
   box-shadow:
     0 1px 2px rgba(13, 148, 136, 0.05),
     0 6px 16px rgba(13, 148, 136, 0.06);
-  transition: transform 250ms ease, box-shadow 250ms ease;
+  transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease, transform 250ms ease, box-shadow 250ms ease;
 }
 
 .review-card:hover {
@@ -2433,7 +2670,7 @@ body.menu-open .fab {
   border-radius: var(--radius-full);
   background: var(--primary-50);
   border: 1px solid var(--primary-100);
-  color: var(--primary-700);
+  color: var(--primary-text);
   font-size: 0.75rem;
   font-weight: 700;
   white-space: nowrap;
@@ -2473,8 +2710,8 @@ body.menu-open .fab {
 .review-form-card {
   max-width: 720px;
   margin: 0 auto;
-  background: var(--white);
-  border: 1px solid var(--gray-200);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: var(--space-8);
   box-shadow: var(--shadow);
@@ -2512,7 +2749,7 @@ body.menu-open .fab {
 
 .star-btn:hover,
 .star-btn.filled {
-  color: #f59e0b;
+  color: var(--accent);
 }
 
 .star-btn:hover {
@@ -2540,8 +2777,8 @@ body.menu-open .fab {
   justify-content: space-between;
   gap: var(--space-3);
   background: var(--success-bg);
-  color: #166534;
-  border: 1px solid #bbf7d0;
+  color: var(--success-ink);
+  border: 1px solid var(--success-border);
   border-radius: var(--radius-md);
   padding: var(--space-3) var(--space-4);
   font-weight: 700;
@@ -2550,14 +2787,14 @@ body.menu-open .fab {
 
 .flash-message.flash-error {
   background: var(--danger-bg);
-  color: #991b1b;
-  border-color: #fecaca;
+  color: var(--danger-ink);
+  border-color: var(--danger-border);
 }
 
 .flash-message.flash-warning {
   background: var(--pending-bg);
-  color: #92400e;
-  border-color: var(--gold-100);
+  color: var(--pending-ink);
+  border-color: var(--pending-border);
 }
 
 .flash-x {
@@ -2591,8 +2828,8 @@ body.menu-open .fab {
   height: 42px;
   padding: 0 var(--space-3);
   border-radius: var(--radius-sm);
-  background: var(--white);
-  border: 1px solid var(--gray-200);
+  background: var(--surface);
+  border: 1px solid var(--border);
   color: var(--body);
   font-weight: 700;
   transition: all var(--transition);
@@ -2600,7 +2837,7 @@ body.menu-open .fab {
 
 .page-link:hover {
   border-color: var(--primary-600);
-  color: var(--primary-700);
+  color: var(--primary-text);
 }
 
 .page-link.current {
@@ -2661,9 +2898,9 @@ body.menu-open .fab {
   gap: 12px;
   max-width: 520px;
   width: 100%;
-  background: #ffffff;
-  color: #0f172a;
-  border: 1px solid #e2e8f0;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--border);
   border-radius: 16px;
   padding: 14px 16px;
   box-shadow: 0 12px 40px rgba(15, 23, 42, 0.18);
@@ -2692,8 +2929,8 @@ body.menu-open .fab {
 }
 
 .pwa-prompt-btn {
-  background: #0f172a;
-  color: #fff;
+  background: var(--inverse);
+  color: var(--inverse-ink);
   border: none;
   border-radius: 10px;
   padding: 8px 18px;
@@ -2704,28 +2941,29 @@ body.menu-open .fab {
   transition: background 0.2s;
 }
 
-.pwa-prompt-btn:hover { background: #1e293b; }
+.pwa-prompt-btn:hover { background: var(--inverse-hover); }
 
 .pwa-prompt-later {
   background: transparent;
-  color: #64748b;
-  border: 1px solid #e2e8f0;
+  color: var(--ink-soft);
+  border: 1px solid var(--border);
   border-radius: 10px;
   padding: 7px 14px;
   font-family: inherit;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
+  transition: background 0.2s;
 }
 
-.pwa-prompt-later:hover { background: #f1f5f9; }
+.pwa-prompt-later:hover { background: var(--hover-tint); }
 
 .pwa-prompt-close {
   position: absolute;
   top: -10px;
   inset-inline-end: -6px;
-  background: #e2e8f0;
-  color: #475569;
+  background: var(--border);
+  color: var(--ink-soft);
   border: none;
   width: 24px;
   height: 24px;
@@ -2740,8 +2978,8 @@ body.menu-open .fab {
   position: absolute;
   inset-inline: 12px;
   bottom: calc(100% + 10px);
-  background: #0f172a;
-  color: #e2e8f0;
+  background: var(--tooltip-bg);
+  color: var(--tooltip-ink);
   border-radius: 12px;
   padding: 12px 14px;
   font-size: 13px;
