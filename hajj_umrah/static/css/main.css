@@ -519,36 +519,72 @@ ol {
    aria-label (set by theme.js) describes the action it will perform.
    ========================================================================== */
 .theme-toggle {
+  position: relative;
   width: 40px;
   height: 40px;
   min-width: 40px;
   flex: 0 0 auto;
-  display: inline-grid;
-  place-items: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 0;
-  border: 1px solid var(--border);
+  /* --bg-soft is one step off --surface (the header colour), so the disc reads
+     as a button in both themes instead of dissolving into the header. */
+  border: 1.5px solid var(--border);
   border-radius: 50%;
-  background: transparent;
+  background: var(--bg-soft);
   color: var(--ink);
   cursor: pointer;
   line-height: 0;
+  z-index: 100;
+  -webkit-appearance: none;
+  appearance: none;
   transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+}
+
+/* Widens the tap area to 44px without growing the 36px visual disc on
+   mobile — pointer events land on the button, not the pseudo-element. */
+.theme-toggle::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 44px;
+  height: 44px;
+  transform: translate(-50%, -50%);
 }
 
 .theme-toggle:hover {
   background: var(--hover-tint);
+  border-color: var(--primary-200);
   color: var(--primary-text);
 }
 
+.theme-toggle:focus-visible {
+  outline: 2px solid var(--primary-500);
+  outline-offset: 2px;
+}
+
+/* --border is near-invisible against the dark header, so give the disc a
+   hairline that actually reads against --surface. */
+[data-theme="dark"] .theme-toggle {
+  border-color: #334155;
+}
+
+[data-theme="dark"] .theme-toggle:hover {
+  border-color: var(--primary-500);
+}
+
 .theme-toggle svg {
-  grid-area: 1 / 1;
   width: 20px;
   height: 20px;
+  flex: 0 0 auto;
   fill: none;
   stroke: currentColor;
   stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
+  pointer-events: none;
   transition: opacity 0.2s ease, transform 0.25s ease;
 }
 
@@ -719,9 +755,10 @@ ol {
   min-height: 44px;
 }
 
-/* Sits between the nav links and the gold CTA: pull it closer to the button. */
+/* Sits between the nav links and the gold CTA. The nav gap is --space-8
+   (32px); pulling back 24px leaves the 8px the design calls for. */
 .main-nav .theme-toggle {
-  margin-inline-end: calc(-1 * var(--space-4));
+  margin-inline-end: -24px;
 }
 
 .nav-toggle {
@@ -2371,13 +2408,17 @@ body.menu-open .fab {
   .main-nav .theme-toggle {
     margin-inline-end: 0;
     align-self: center;
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
     color: #e2e8f0;
-    border-color: rgba(255, 255, 255, 0.22);
-    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.28);
+    background: rgba(255, 255, 255, 0.08);
   }
 
   .main-nav .theme-toggle:hover {
-    background: rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.16);
+    border-color: rgba(255, 255, 255, 0.4);
     color: var(--gold-400);
   }
 
