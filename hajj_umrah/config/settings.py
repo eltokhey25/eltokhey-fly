@@ -2,13 +2,13 @@
 config/settings.py
 Every setting for the Hajj & Umrah site, in the order Django documents them.
 
-Two apps: `core` (the public site, the models, the chatbot) and `dashboard`
-(the staff back office). SQLite and a file-backed cache are deliberate - see
-DEPLOY.md for why, and for which environment variable each block reads.
+Two apps: `core` (the public site and the models) and `dashboard` (the staff
+back office). SQLite is deliberate - see DEPLOY.md for why, and for which
+environment variable each block reads.
 
 Reading order: paths and .env loading, then security, then apps and middleware,
 then templates, then database, then auth, then i18n, then static and media, then
-cache, then email, then the chatbot settings.
+email, then the proxy settings.
 """
 
 import os
@@ -127,16 +127,6 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = os.environ.get('DJANGO_MEDIA_ROOT', str(BASE_DIR / 'media'))
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# The default LocMemCache is per-process, so with `gunicorn --workers 2` each
-# worker would keep its own rate-limit counters and double the effective cap.
-# A file-backed cache is shared by every worker on the host.
-CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.filebased.FileBasedCache',
-        'LOCATION': os.environ.get('DJANGO_CACHE_ROOT', str(BASE_DIR / 'cache')),
-    }
-}
-
 EMAIL_HOST = os.environ.get('EMAIL_HOST', 'localhost')
 EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
 EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'true').lower() in {'1', 'true', 'yes', 'on'}
@@ -160,18 +150,6 @@ EMAIL_BACKEND = os.environ.get(
 
 # Same-origin only so the dashboard can embed the public site in a live preview iframe
 X_FRAME_OPTIONS = 'SAMEORIGIN'
-
-# --- AI Chatbot (Groq) ---
-GROQ_API_KEY = os.environ.get('GROQ_API_KEY', '')
-
-# The chatbot widget posts to /api/chat/ from every visitor, so the endpoint is
-# rate limited. These caps bound how much Groq spend a single visitor (or the
-# site as a whole) can generate per hour.
-CHAT_RATE_LIMIT_PER_HOUR = int(os.environ.get('CHAT_RATE_LIMIT_PER_HOUR', '20'))
-CHAT_BOOKING_RATE_LIMIT_PER_HOUR = int(os.environ.get('CHAT_BOOKING_RATE_LIMIT_PER_HOUR', '10'))
-CHAT_RATE_LIMIT_GLOBAL_PER_HOUR = int(
-    os.environ.get('CHAT_RATE_LIMIT_GLOBAL_PER_HOUR', '300')
-)
 
 # Deployed behind a proxy (fly.io), so request.META['REMOTE_ADDR'] is the proxy,
 # not the visitor. When this is on we read the client IP from the *right-most*

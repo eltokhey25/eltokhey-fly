@@ -142,7 +142,6 @@ Reads: the `settings` context processor (company details) and `request`.
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'css/main.css' %}?v=5">
-  <link rel="stylesheet" href="{% static 'css/chatbot.css' %}?v=5">
   <script src="{% static 'js/theme.js' %}?v=2" defer></script>
   <script src="{% static 'js/main.js' %}" defer></script>
   {% block extra_js %}{% endblock %}
@@ -333,8 +332,5 @@ if ('serviceWorker' in navigator) {
     });
   }
 </script>
-
-{% include 'chatbot/widget.html' %}
-<script src="{% static 'js/chatbot.js' %}?v=5"></script>
 </body>
 </html>

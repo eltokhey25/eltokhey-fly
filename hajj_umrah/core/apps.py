@@ -7,7 +7,7 @@ from django.apps import AppConfig
 
 
 class CoreConfig(AppConfig):
-    """Public site app: trips, bookings, reviews, chatbot and SEO."""
+    """Public site app: trips, bookings, reviews and SEO."""
 
     name = 'core'
     verbose_name = 'الحج والعمرة'

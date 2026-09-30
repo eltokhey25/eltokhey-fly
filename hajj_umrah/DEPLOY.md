@@ -1,8 +1,8 @@
 # Deployment
 
 The site runs on [fly.io](https://fly.io) as a single machine in `ams`, with
-SQLite, uploaded media and the rate-limit cache on a mounted volume, and static
-files served by WhiteNoise from the image itself.
+SQLite and uploaded media on a mounted volume, and static files served by
+WhiteNoise from the image itself.
 
 - `Dockerfile` — builds the image and runs `migrate` then `gunicorn`.
 - `fly.toml` — the app config, the `[env]` block and the volume mount.
@@ -14,7 +14,6 @@ files served by WhiteNoise from the image itself.
 fly launch --no-deploy            # only if fly.toml does not exist yet
 fly volumes create data_volume    # the mount that holds /data
 fly secrets set DJANGO_SECRET_KEY="$(openssl rand -base64 48)"
-fly secrets set GROQ_API_KEY=...
 fly secrets set EMAIL_HOST_USER=... EMAIL_HOST_PASSWORD=...
 fly deploy
 ```
@@ -26,13 +25,12 @@ template and is safe to commit.
 
 ## What lives on the volume
 
-`fly.toml` mounts a volume at `/data` and points three settings into it:
+`fly.toml` mounts a volume at `/data` and points two settings into it:
 
 | Setting | Path | Contents |
 | --- | --- | --- |
 | `DJANGO_DB_PATH` | `/data/db.sqlite3` | The whole database |
 | `DJANGO_MEDIA_ROOT` | `/data/media` | Uploaded images |
-| `DJANGO_CACHE_ROOT` | `/data/cache` | Rate-limit counters |
 
 This is the one thing to be careful about: **the database is a file on that
 volume, not a managed service.** A single SQLite file is fine at this site's
@@ -45,16 +43,10 @@ fly ssh console -C 'cp /data/db.sqlite3 /data/db.sqlite3.$(date +%F)'
 fly ssh console -C 'sqlite3 /data/db.sqlite3 ".backup /data/backup.sqlite3"'
 ```
 
-The cache must be a **shared** backend, not Django's default `LocMemCache`.
-The container runs `gunicorn --workers 2`, and a per-process cache would give
-each worker its own rate-limit counters, doubling the effective caps. The
-file-based cache on the volume is shared by every worker, which is why
-`DJANGO_CACHE_ROOT` exists.
-
 ## Deploying an update
 
 ```bash
-cd hajj_umrah && ../venv/bin/python manage.py test   # the chatbot tests are offline
+cd hajj_umrah && ../venv/bin/python manage.py test
 cd .. && fly deploy
 ```
 
@@ -70,8 +62,9 @@ between `migrate` finishing and the new workers accepting traffic.
 - `DJANGO_ALLOWED_HOSTS` must list the real host. The default
   (`127.0.0.1,localhost,testserver`) will reject every public request.
 - `DJANGO_TRUST_X_FORWARDED_FOR` stays `True` **only** because Fly's proxy sits
-  in front. If the app is ever exposed directly, set it to `False` so the chat
-  rate limits key on the real client address instead of a forgeable header.
+  in front. If the app is ever exposed directly, set it to `False` so the
+  review-spam rate limit keys on the real client address instead of a forgeable
+  header.
 - The Gmail SMTP password must be an [app password](https://support.google.com/accounts/answer/185833),
   not the account password.
 
@@ -102,15 +95,12 @@ the two changes that matter, in order:
 1. **Move the database off the volume.** A single SQLite file cannot be shared
    by two machines, and `auto_stop_machines`/`min_machines_running = 0` in
    `fly.toml` already means the machine count can go to zero and back.
-   Postgres means also replacing the file-based cache with Redis, because the
-   file cache only works while the files are on one machine.
 2. **Only then consider more than one machine**, which also means the media
    directory has to move to object storage.
 
 `config/asgi.py` exists so an async server can be introduced later without
-touching a view, but nothing in the project needs ASGI today: the only slow
-operation is the chatbot call, which already returns a cached or fallback reply
-rather than holding a worker.
+touching a view, but nothing in the project needs ASGI today: every public view
+is a database read, and the POSTs are a form save plus two emails.
 
 ## Rolling back
 

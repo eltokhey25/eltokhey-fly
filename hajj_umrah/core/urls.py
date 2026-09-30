@@ -25,15 +25,9 @@ urlpatterns = [
     path('reviews/submit/', views.review_submit, name='review_submit'),  # Review form; honeypot + IP rate limit
     path('track/', views.track_booking, name='track_booking'),        # Track a booking by reference code or phone
     path('offline/', views.offline, name='offline'),                  # PWA offline fallback page
-    path('chat/', views.chat_page, name='chat_page'),                 # Full-screen chat page for mobile
 
     # ---- Service worker -------------------------------------------------
     # Served by a view (not staticfiles) so the served file always carries
     # no-cache headers and the worker can update itself in the wild.
     path('sw.js', views.service_worker, name='service_worker'),
-
-    # ---- JSON API consumed by static/js/chatbot.js ---------------------
-    path('api/chat/', views.chat_api, name='chat_api'),               # POST a message, get the AI reply
-    path('api/chat/trips/', views.chat_trips_api, name='chat_trips_api'),     # GET the trip cards shown in chat
-    path('api/chat/booking/', views.chat_booking_api, name='chat_booking_api'),  # POST a booking from inside chat
 ]

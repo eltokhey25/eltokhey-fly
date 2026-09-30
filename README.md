@@ -1,7 +1,7 @@
 # Eltokhey Hajj & Umrah
 
 Django site for a Hajj and Umrah travel agency: a public Arabic (RTL) brochure
-site with an AI booking assistant, and a staff dashboard for trips, bookings,
+site with a booking form and reviews, and a staff dashboard for trips, bookings,
 reviews, site copy and the media library.
 
 ```
@@ -11,9 +11,8 @@ venv/                     local virtualenv
 ```
 
 **Read [`hajj_umrah/README.md`](hajj_umrah/README.md) for the architecture** —
-the two apps and their URL maps, the models, the environment variables, and why
-the AI chatbot's `core/chatbot.py` is shaped the way it is. Deployment is in
-[`hajj_umrah/DEPLOY.md`](hajj_umrah/DEPLOY.md).
+the two apps and their URL maps, the models and the environment variables.
+Deployment is in [`hajj_umrah/DEPLOY.md`](hajj_umrah/DEPLOY.md).
 
 ## Quick start
 
@@ -28,7 +27,7 @@ cd hajj_umrah
 ```
 
 Run every command from `hajj_umrah/` with `../venv/bin/python`. The test suite
-is offline — no API key, no billed requests:
+is entirely offline — it makes no network requests:
 
 ```bash
 cd hajj_umrah && ../venv/bin/python manage.py test

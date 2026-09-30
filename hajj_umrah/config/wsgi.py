@@ -3,8 +3,7 @@ config/wsgi.py
 The synchronous entry point: `application` is what gunicorn (or mod_wsgi) loads.
 
 WSGI runs one request at a time per worker, which is all this site needs - the
-only slow thing in it is the AI chatbot, and that call already returns a cached
-or fallback reply rather than blocking a queue.
+public pages are database reads and the POSTs are a form save plus two emails.
 """
 
 import os

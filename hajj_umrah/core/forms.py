@@ -1,8 +1,7 @@
 """
 core/forms.py
 Public form definitions. Only the review form is public; the booking
-form is validated by hand in core/views.booking because its markup is shared
-with the chat flow.
+form is validated by hand in core/views.booking.
 """
 from django import forms
 

@@ -2,8 +2,8 @@
 core/models.py
 Database models for the whole site: Trip, Booking, Review and the
 SiteSettings singleton, plus the image-normalisation helper they share.
-Used by: core/views.py, core/chatbot.py, core/admin.py, dashboard/views.py,
-         dashboard/forms.py, and every template via the site_settings processor.
+Used by: core/views.py, core/admin.py, dashboard/views.py, dashboard/forms.py,
+         and every template via the site_settings processor.
 """
 from io import BytesIO
 from uuid import uuid4

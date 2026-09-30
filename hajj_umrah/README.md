@@ -1,7 +1,7 @@
 # الطوخي للحج والعمرة — Eltokhey Hajj & Umrah
 
 Django site for a Hajj and Umrah travel agency: a public Arabic (RTL) brochure
-site, an AI booking assistant, and a staff dashboard for trips, bookings,
+site with a booking form and reviews, and a staff dashboard for trips, bookings,
 reviews, site copy and the media library.
 
 The site is deployed on [fly.io](https://fly.io) behind WhiteNoise, and runs on
@@ -26,12 +26,6 @@ cd hajj_umrah
 `manage.py` lives in `hajj_umrah/`, so every command runs from that directory
 and the interpreter is one level up at `../venv/bin/python`.
 
-To check the AI chatbot end to end (key, available models, one live message):
-
-```bash
-../venv/bin/python manage.py check_groq
-```
-
 ## Tests
 
 ```bash
@@ -39,10 +33,8 @@ cd hajj_umrah
 ../venv/bin/python manage.py test
 ```
 
-The suite is offline: every test that would reach Groq mocks
-`core.chatbot.requests`, so no API key is needed and nothing is billed. Expect
-it to take about five minutes for 157 tests — the chat rate-limit and
-fallback-chain tests deliberately walk every model in the chain.
+The suite is entirely offline: no test makes a network request, so no API key
+is needed and nothing is billed.
 
 ## Layout
 
@@ -56,15 +48,13 @@ fallback-chain tests deliberately walk every model in the chain.
 │   │   ├── wsgi.py  asgi.py
 │   ├── core/                    the public app
 │   │   ├── models.py            Trip, Booking, Review, SiteSettings
-│   │   ├── views.py             public pages + the JSON API
+│   │   ├── views.py             the public pages
 │   │   ├── urls.py
-│   │   ├── forms.py             booking form, review form
-│   │   ├── chatbot.py           prompt building, Groq call, fallback chain
+│   │   ├── forms.py             review form
 │   │   ├── whatsapp.py          WhatsApp deep links and messages
 │   │   ├── context_processors.py  site_settings -> every template
 │   │   ├── sitemaps.py
 │   │   ├── admin.py
-│   │   ├── management/commands/check_groq.py
 │   │   ├── migrations/
 │   │   └── tests.py
 │   ├── dashboard/               the staff app
@@ -98,12 +88,8 @@ fallback-chain tests deliberately walk every model in the chain.
 | `/reviews/` | `core.views.reviews_list` | Paginated approved reviews |
 | `/reviews/submit/` | `core.views.review_submit` | Review form; honeypot + per-IP rate limit |
 | `/track/` | `core.views.track_booking` | Look a booking up by reference code or phone |
-| `/chat/` | `core.views.chat_page` | Standalone full-screen chat page |
 | `/offline/` | `core.views.offline` | PWA offline fallback |
 | `/sw.js` | `core.views.service_worker` | Public service worker, served with no-cache |
-| `/api/chat/` | `core.views.chat_api` | POST a message, get the AI reply |
-| `/api/chat/trips/` | `core.views.chat_trips_api` | Trip cards the chatbot quotes from |
-| `/api/chat/booking/` | `core.views.chat_booking_api` | Create a booking from inside the chat |
 
 URLs are namespaced under `core:` and always reversed by name, so a path
 change never breaks a template.
@@ -121,25 +107,6 @@ Mounted at `/dashboard/`. Access is enforced per view by the decorators in
 A staff user who is not a superuser therefore sees the content menus but not
 the users menu, and cannot reach the user-management views by URL.
 
-## The AI chatbot
-
-`core/chatbot.py` talks to Groq and is the part of the project most worth
-reading before changing anything. Three constraints shape the whole file:
-
-1. **The account has a 6000 tokens/minute cap.** The system prompt is re-sent
-   on every turn, so the trip list is only included when the question is
-   actually about trips. A greeting costs roughly a quarter of a trip question.
-2. **Rate limits are per model.** `MODEL_FALLBACKS` is an ordered chain; a 429
-   moves to the next model immediately rather than sleeping on an empty bucket.
-   An empty reasoning-only reply is retried rather than shown to the visitor.
-3. **A user-visible failure is always a string.** `get_chatbot_response` never
-   raises: missing key, timeout, 401, exhausted 429 and malformed JSON each
-   return a distinct Arabic fallback. With no key at all the API points the
-   visitor at WhatsApp instead.
-
-Short, self-contained answers are cached, so a repeated question is free.
-Anything booking-related is never cached, so no stale price is ever replayed.
-
 ## Models
 
 - **`Trip`** — name, slug, type (`hajj` / `umrah` / `ramadan`), free-text
@@ -149,8 +116,8 @@ Anything booking-related is never cached, so no stale price is ever replayed.
   lists edited as one-item-per-line textareas by `dashboard.forms.TripForm`.
   Uploads are re-encoded and downscaled on save (1600px thumbnails, 400px
   review photos, EXIF stripped, transparency preserved).
-- **`Booking`** — created from the public form or the chat, or by hand in the
-  dashboard. Gets a unique `reference_code` automatically, and moves through
+- **`Booking`** — created from the public form or by hand in the dashboard.
+  Gets a unique `reference_code` automatically, and moves through
   `pending → confirmed / rejected → completed`, notifying the customer by email
   and WhatsApp at each step.
 - **`Review`** — customer reviews, `pending` until a staff member approves
@@ -175,15 +142,10 @@ full set is read in `config/settings.py`.
 | `DJANGO_DEBUG` | `False` in production. |
 | `DJANGO_ALLOWED_HOSTS` | Comma-separated host list. |
 | `DJANGO_DB_PATH` | SQLite file path. |
-| `DJANGO_MEDIA_ROOT` / `DJANGO_CACHE_ROOT` | Writable paths on the volume. |
+| `DJANGO_MEDIA_ROOT` | Writable path for uploads on the volume. |
 | `DJANGO_TRUST_X_FORWARDED_FOR` | `False` when there is no proxy in front. |
 | `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_USE_TLS`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD` | SMTP. Without credentials the console backend is used. |
 | `DEFAULT_FROM_EMAIL`, `ADMIN_NOTIFICATION_EMAIL` | Who sends, who is notified. |
-| `GROQ_API_KEY` | Enables the chatbot. Without it the widget offers WhatsApp. |
-| `GROQ_MODEL` | Overrides the first model in the fallback chain. |
-| `CHAT_RATE_LIMIT_PER_HOUR` | Per-visitor chat cap. |
-| `CHAT_BOOKING_RATE_LIMIT_PER_HOUR` | Per-visitor in-chat booking cap. |
-| `CHAT_RATE_LIMIT_GLOBAL_PER_HOUR` | Site-wide backstop. |
 
 ## Notes for contributors
 
@@ -192,10 +154,7 @@ full set is read in `config/settings.py`.
   it. When you add a file, add the header too.
 - **A `{# ... #}` header must come before `{% extends %}`**, never a
   `{% comment %}` block — Django rejects a `{% comment %}` before `{% extends %}`.
-- **The chatbot's docstrings explain the rate-limit arithmetic.** If you change
-  a prompt or the model chain, re-check the token budget; the tests in
-  `ChatCostControlTests` are what keep it honest.
-- **`.gitignore` rules for `media/`, `cache/` and `staticfiles/` are anchored
+- **`.gitignore` rules for `media/` and `staticfiles/` are anchored
   with a leading slash on purpose.** An unanchored `media/` once silently
   excluded `dashboard/templates/dashboard/media/`, which cost the repository
   two templates.
